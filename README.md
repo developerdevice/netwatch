@@ -4,6 +4,8 @@ NetWatch e uma alternativa web para monitoramento visual de rede inspirada na pr
 
 O objetivo do projeto nao e substituir Grafana, Zabbix ou o proprio The Dude em ambientes grandes, complexos ou com necessidades mais avancadas de observabilidade. A proposta aqui e oferecer uma experiencia mais pratica para quem quer visualizar topologia, dispositivos, conexoes e status de forma direta.
 
+![hippo](https://s13.gifyu.com/images/bqS9O.gif)
+
 ## Por que este projeto existe
 
 Muitas ferramentas de monitoramento sao poderosas, mas tambem podem exigir mais setup, mais infraestrutura ou mais carga operacional do que alguns cenarios pedem. O NetWatch nasce para atender quem quer uma opcao mais simples, web e aberta para adaptar ao proprio contexto.
