@@ -1,0 +1,23 @@
+# Producao: exige `.env` na raiz (segredos e caminhos). `npm run docker:prod`
+# ou: docker compose -f docker-compose.prod.yaml up --build -d
+#
+# Nao sobrescreva aqui variaveis de aplicacao — use apenas `.env` (a partir de `.env.example`).
+# O volume nomeado monta em `${NETWATCH_DOCKER_PERSIST_DIR}`; alinhe com `NETWATCH_SQLITE_PATH`.
+
+services:
+  netwatch:
+    image: netwatch:prod
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    ports:
+      - '3000:3000'
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - netwatch_prod_data:${NETWATCH_DOCKER_PERSIST_DIR:-/app/.data}
+    restart: unless-stopped
+
+volumes:
+  netwatch_prod_data:

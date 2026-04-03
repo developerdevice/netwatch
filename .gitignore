@@ -1,0 +1,11 @@
+.vercel/
+next.user-config.*
+
+.env
+.env*.local
+
+node_modules
+.next/
+.DS_Store
+.data/
+*.tsbuildinfo

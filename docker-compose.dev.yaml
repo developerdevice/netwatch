@@ -1,0 +1,32 @@
+# Desenvolvimento: `npm run docker:dev` (recomendado) ou:
+#   docker compose --env-file .env.docker.dev -f docker-compose.dev.yaml up --build
+#
+# Variaveis da aplicacao vêm de `.env.docker.dev` e, se existir, `.env` — nao duplique tunings no YAML.
+# O mount do volume usa `${NETWATCH_DOCKER_PERSIST_DIR}`; esse valor tem de corresponder ao diretorio-pai
+# do ficheiro em `NETWATCH_SQLITE_PATH` dentro do container (cwd /app). Ver `.env.example`.
+
+services:
+  netwatch:
+    image: netwatch:dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - '3000:3000'
+    volumes:
+      - .:/app
+      - netwatch_dev_node_modules:/app/node_modules
+      - netwatch_dev_data:${NETWATCH_DOCKER_PERSIST_DIR:-/app/.data}
+    env_file:
+      - path: .env.docker.dev
+        required: true
+      - path: .env
+        required: false
+    environment:
+      NODE_ENV: development
+    stdin_open: true
+    tty: true
+
+volumes:
+  netwatch_dev_node_modules:
+  netwatch_dev_data:
