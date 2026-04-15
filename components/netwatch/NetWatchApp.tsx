@@ -7,7 +7,19 @@ import { NetworkCanvas } from './NetworkCanvas'
 import { DevicePanel } from './DevicePanel'
 import { TopBar } from './TopBar'
 import { ContextMenu } from './ContextMenu'
-import { CreateBadgeModal, CreateDeviceModal, CreateSubmapModal, EditBadgeModal, EditDeviceModal, EditLinkModal, EditSubmapModal, HistoryModal, PingResultModal, TracertResultModal } from './Modals'
+import {
+  CreateBadgeModal,
+  CreateDeviceModal,
+  CreateSubmapModal,
+  EditBadgeModal,
+  EditDeviceModal,
+  EditLinkEndpointModal,
+  EditLinkModal,
+  EditSubmapModal,
+  HistoryModal,
+  PingResultModal,
+  TracertResultModal,
+} from './Modals'
 import { useStatusSimulation } from '@/hooks/use-status-simulation'
 import { useLiveDeviceStatus } from '@/hooks/use-live-device-status'
 import { useRef, useState, useCallback } from 'react'
@@ -73,6 +85,7 @@ export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
       <EditDeviceModal />
       <EditSubmapModal />
       <EditLinkModal />
+      <EditLinkEndpointModal />
       <EditBadgeModal />
       <CreateDeviceModal />
       <CreateSubmapModal />

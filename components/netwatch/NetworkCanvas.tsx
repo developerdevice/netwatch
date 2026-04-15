@@ -687,6 +687,13 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
                 }}
                 onContextMenu={event => handleLinkContextMenu(event, link)}
                 onControlHandleMouseDown={event => handleLinkControlMouseDown(event, link)}
+                onEndpointSelect={() => dispatch({ type: 'SELECT_LINK', linkId: link.id })}
+                onEndpointEditRequest={end =>
+                  dispatch({
+                    type: 'SET_EDITING_LINK_ENDPOINT',
+                    payload: { linkId: link.id, mapId: link.mapId, end },
+                  })
+                }
               />
             ))}
 
