@@ -17,10 +17,10 @@ export function Toolbar({ zoom, onZoomIn, onZoomOut, onFitView }: ToolbarProps) 
   const hasSelection = state.selectedDeviceId || state.selectedLinkId || state.selectedSubmapId || state.selectedBadgeId
 
   return (
-    <div className="flex items-center gap-2 border-b border-border px-4 py-3 bg-card/70">
+    <div className="flex min-w-0 items-center gap-2 border-b border-border bg-card/70 px-2 py-2 sm:px-4 sm:py-3">
       {state.pendingLinkSourceId ? (
         <>
-          <span className="rounded-full border border-amber-500/20 bg-amber-500/8 px-3 py-1.5 text-xs text-amber-300">
+          <span className="min-w-0 truncate rounded-full border border-amber-500/20 bg-amber-500/8 px-2 py-1.5 text-[11px] text-amber-300 sm:px-3 sm:text-xs">
             Selecione outro dispositivo ou submap para concluir a conexão
           </span>
           <button
@@ -33,7 +33,7 @@ export function Toolbar({ zoom, onZoomIn, onZoomOut, onFitView }: ToolbarProps) 
           </button>
         </>
       ) : (
-        <span className="text-xs text-muted-foreground">
+        <span className="min-w-0 flex-1 truncate text-[11px] text-muted-foreground sm:text-xs">
           Clique direito no fundo para adicionar dispositivo, submap ou badge
         </span>
       )}
@@ -52,10 +52,10 @@ export function Toolbar({ zoom, onZoomIn, onZoomOut, onFitView }: ToolbarProps) 
         </>
       )}
 
-      <div className="flex-1" />
+      <div className="min-w-0 flex-1" />
 
       {/* Zoom controls */}
-      <div className="flex items-center gap-1 rounded-xl border border-border bg-secondary/50 p-1">
+      <div className="flex shrink-0 items-center gap-1 rounded-xl border border-border bg-secondary/50 p-1">
         <button
           onClick={onZoomOut}
           className="rounded-lg p-2 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"

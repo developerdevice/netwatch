@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useStore, useSelectedDevice } from '@/lib/store'
 import { statusColorHex, statusLabel } from '@/lib/utils-net'
 import { X, Activity, Route, History, Edit, Link2 } from 'lucide-react'
@@ -8,6 +9,8 @@ import { getBadgeColorLabel, getBadgeStyle } from '@/lib/netwatch/badges'
 import { clearSelection, openDeviceHistory, openDevicePing, openDeviceTracert } from '@/lib/netwatch/commands'
 import { getLinkCapacity, getLinkCapacityLabel } from '@/lib/netwatch/links'
 import { getStatusSummary } from '@/lib/netwatch/status'
+import { useIsMdUp } from '@/hooks/use-is-md-up'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 
 const iconLabels: Record<DeviceIcon, string> = {
   router: 'Router',
@@ -21,6 +24,7 @@ const iconLabels: Record<DeviceIcon, string> = {
 
 export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
   const { state, dispatch } = useStore()
+  const isMdUp = useIsMdUp()
   const device = useSelectedDevice()
   const activeMap = state.maps.find(m => m.id === state.activeMapId)
 
@@ -53,19 +57,39 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
     clearSelection(dispatch)
   }
 
+  function wrapAside(body: ReactNode) {
+    if (isMdUp) {
+      return (
+        <aside className="flex h-full w-64 shrink-0 flex-col overflow-y-auto border-l border-border bg-card">
+          {body}
+        </aside>
+      )
+    }
+    return (
+      <Sheet open onOpenChange={open => !open && close()}>
+        <SheetContent
+          side="right"
+          className="flex h-full max-h-[88dvh] w-full flex-col gap-0 overflow-hidden border-l p-0 sm:max-w-md"
+        >
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-card">{body}</div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
   if (selectedSubmap) {
     const targetMap = state.maps.find(m => m.id === selectedSubmap.targetMapId)
     const summary = getStatusSummary(targetMap?.devices ?? [])
     
-    return (
-      <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    return wrapAside(
+      <>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-foreground">Submap</span>
           <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
             <X size={14} />
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Nome</p>
             <p className="text-sm font-medium text-foreground">{selectedSubmap.label}</p>
@@ -105,21 +129,21 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             Remover Submap
           </button>
         </div>
-      </aside>
+      </>,
     )
   }
 
   if (selectedLink && linkSrc && linkTgt) {
     const capacity = getLinkCapacity(selectedLink)
-    return (
-      <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    return wrapAside(
+      <>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-foreground">Conexão</span>
           <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
             <X size={14} />
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div className="space-y-2">
             <div>
               <p className="text-xs text-muted-foreground">Origem</p>
@@ -162,22 +186,22 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             Remover Conexão
           </button>
         </div>
-      </aside>
+      </>,
     )
   }
 
   if (selectedBadge) {
     const badgeStyle = getBadgeStyle(selectedBadge.color)
 
-    return (
-      <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+    return wrapAside(
+      <>
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-foreground">Badge</span>
           <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
             <X size={14} />
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div
             className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
             style={{
@@ -205,29 +229,29 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             Remover Badge
           </button>
         </div>
-      </aside>
+      </>,
     )
   }
 
   if (!device) return null
   const color = statusColorHex(device.status)
 
-  return (
-    <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+  return wrapAside(
+    <>
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
           <span
-            className="w-2.5 h-2.5 rounded-full shrink-0"
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <span className="text-sm font-medium text-foreground truncate">{device.label}</span>
+          <span className="truncate text-sm font-medium text-foreground">{device.label}</span>
         </div>
         <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
           <X size={14} />
         </button>
       </div>
 
-      <div className="p-4 space-y-4 flex-1">
+      <div className="flex-1 space-y-4 p-4">
         {/* Status badge */}
         <div
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
@@ -332,7 +356,7 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
           Remover Dispositivo
         </button>
       </div>
-    </aside>
+    </>,
   )
 }
 
