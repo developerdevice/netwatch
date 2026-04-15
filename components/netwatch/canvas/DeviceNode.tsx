@@ -3,7 +3,7 @@
 import { Device, DeviceIcon } from '@/lib/types'
 import { truncateNodeLabel } from '@/lib/netwatch/map-geometry'
 import { statusColorHex } from '@/lib/utils-net'
-import { MouseEvent } from 'react'
+import { MouseEvent, TouchEvent } from 'react'
 
 function DeviceIconSvg({ icon, color }: { icon: DeviceIcon; color: string }) {
   const props = { fill: color, fillOpacity: 0.9 }
@@ -87,6 +87,10 @@ interface DeviceNodeProps {
   isLinkSource: boolean
   onMouseDown: (event: MouseEvent<SVGGElement>) => void
   onContextMenu: (event: MouseEvent<SVGGElement>) => void
+  onTouchStart?: (event: TouchEvent<SVGGElement>) => void
+  onTouchMove?: (event: TouchEvent<SVGGElement>) => void
+  onTouchEnd?: (event: TouchEvent<SVGGElement>) => void
+  onTouchCancel?: (event: TouchEvent<SVGGElement>) => void
 }
 
 export function DeviceNode({
@@ -95,6 +99,10 @@ export function DeviceNode({
   isLinkSource,
   onMouseDown,
   onContextMenu,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
 }: DeviceNodeProps) {
   const color = statusColorHex(device.status)
   const width = 148
@@ -107,6 +115,10 @@ export function DeviceNode({
       transform={`translate(${device.x}, ${device.y})`}
       onMouseDown={onMouseDown}
       onContextMenu={onContextMenu}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
       style={{ cursor: isLinkSource ? 'crosshair' : 'grab' }}
       className="group"
     >

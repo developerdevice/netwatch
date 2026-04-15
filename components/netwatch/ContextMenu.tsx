@@ -43,8 +43,9 @@ export function ContextMenu() {
   const { contextMenu } = state
 
   useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+    const handlePointerOrTouch = (e: MouseEvent | TouchEvent) => {
+      const target = e instanceof TouchEvent ? e.target : e.target
+      if (menuRef.current && target instanceof Node && !menuRef.current.contains(target)) {
         dispatch({ type: 'CLOSE_CONTEXT_MENU' })
       }
     }
@@ -52,11 +53,13 @@ export function ContextMenu() {
       if (e.key === 'Escape') dispatch({ type: 'CLOSE_CONTEXT_MENU' })
     }
     if (contextMenu) {
-      document.addEventListener('mousedown', handleClick)
+      document.addEventListener('mousedown', handlePointerOrTouch)
+      document.addEventListener('touchstart', handlePointerOrTouch, { capture: true })
       document.addEventListener('keydown', handleEsc)
     }
     return () => {
-      document.removeEventListener('mousedown', handleClick)
+      document.removeEventListener('mousedown', handlePointerOrTouch)
+      document.removeEventListener('touchstart', handlePointerOrTouch, { capture: true })
       document.removeEventListener('keydown', handleEsc)
     }
   }, [contextMenu, dispatch])

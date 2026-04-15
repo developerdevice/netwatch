@@ -2,7 +2,7 @@
 
 import { Link } from '@/lib/types'
 import { buildCurvedLinkPath, getNodePosition } from '@/lib/netwatch/map-geometry'
-import { MouseEvent } from 'react'
+import { MouseEvent, TouchEvent } from 'react'
 import { getLinkCapacity, getLinkCapacityLabel, getLinkStrokeWidth } from '@/lib/netwatch/links'
 
 interface LinkPathProps {
@@ -13,6 +13,10 @@ interface LinkPathProps {
   onClick: () => void
   onContextMenu: (event: MouseEvent<SVGPathElement>) => void
   onControlHandleMouseDown: (event: MouseEvent<SVGCircleElement>) => void
+  onHitTouchStart?: (event: TouchEvent<SVGPathElement>) => void
+  onHitTouchMove?: (event: TouchEvent<SVGPathElement>) => void
+  onHitTouchEnd?: (event: TouchEvent<SVGPathElement>) => void
+  onHitTouchCancel?: (event: TouchEvent<SVGPathElement>) => void
 }
 
 export function LinkPath({
@@ -23,6 +27,10 @@ export function LinkPath({
   onClick,
   onContextMenu,
   onControlHandleMouseDown,
+  onHitTouchStart,
+  onHitTouchMove,
+  onHitTouchEnd,
+  onHitTouchCancel,
 }: LinkPathProps) {
   const source = nodeResolver(link.sourceId)
   const target = nodeResolver(link.targetId)
@@ -48,6 +56,10 @@ export function LinkPath({
         style={{ cursor: 'pointer' }}
         onClick={onClick}
         onContextMenu={onContextMenu}
+        onTouchStart={onHitTouchStart}
+        onTouchMove={onHitTouchMove}
+        onTouchEnd={onHitTouchEnd}
+        onTouchCancel={onHitTouchCancel}
       />
 
       <path

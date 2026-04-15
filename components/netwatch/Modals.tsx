@@ -5,7 +5,8 @@ import { AppState, BadgeColor, DeviceIcon, LinkCapacity, MapBadge } from '@/lib/
 import { X, Router, Radio, Server, Wifi, Antenna, Box } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { generateId } from '@/lib/utils-net'
-import { BADGE_COLOR_OPTIONS, getBadgeColorLabel, getBadgeStyle } from '@/lib/netwatch/badges'
+import { useTheme } from 'next-themes'
+import { BADGE_COLOR_OPTIONS, getBadgeColorLabel, getBadgeStyle, type BadgeTheme } from '@/lib/netwatch/badges'
 import { LINK_CAPACITY_OPTIONS, getLinkCapacityLabel } from '@/lib/netwatch/links'
 
 const DEVICE_ICONS: { value: DeviceIcon; label: string; Icon: React.ElementType }[] = [
@@ -215,10 +216,13 @@ function BadgeColorPicker({
   value: BadgeColor
   onChange: (value: BadgeColor) => void
 }) {
+  const { resolvedTheme } = useTheme()
+  const badgeTheme: BadgeTheme = resolvedTheme === 'light' ? 'light' : 'dark'
+
   return (
     <div className="grid grid-cols-5 gap-2">
       {BADGE_COLOR_OPTIONS.map(option => {
-        const style = getBadgeStyle(option)
+        const style = getBadgeStyle(option, badgeTheme)
 
         return (
           <button

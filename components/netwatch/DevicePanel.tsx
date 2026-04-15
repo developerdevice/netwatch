@@ -1,13 +1,35 @@
 'use client'
 
+import type { ReactNode } from 'react'
+import { useTheme } from 'next-themes'
+import { useIsMdUp } from '@/hooks/use-is-md-up'
 import { useStore, useSelectedDevice } from '@/lib/store'
 import { statusColorHex, statusLabel } from '@/lib/utils-net'
 import { X, Activity, Route, History, Edit, Link2 } from 'lucide-react'
 import { DeviceStatus, DeviceIcon } from '@/lib/types'
-import { getBadgeColorLabel, getBadgeStyle } from '@/lib/netwatch/badges'
+import { getBadgeColorLabel, getBadgeStyle, type BadgeTheme } from '@/lib/netwatch/badges'
 import { clearSelection, openDeviceHistory, openDevicePing, openDeviceTracert } from '@/lib/netwatch/commands'
 import { getLinkCapacity, getLinkCapacityLabel } from '@/lib/netwatch/links'
 import { getStatusSummary } from '@/lib/netwatch/status'
+
+const dockAsideClass =
+  'hidden h-full w-full max-w-none shrink-0 flex flex-col border-l border-border bg-card overflow-y-auto md:flex md:w-64'
+
+const sheetBodyClass =
+  'flex w-full max-w-full min-h-0 flex-1 flex-col overflow-y-auto pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+
+function PanelSurface({
+  placement,
+  children,
+}: {
+  placement: 'dock' | 'sheet'
+  children: ReactNode
+}) {
+  if (placement === 'dock') {
+    return <aside className={dockAsideClass}>{children}</aside>
+  }
+  return <div className={sheetBodyClass}>{children}</div>
+}
 
 const iconLabels: Record<DeviceIcon, string> = {
   router: 'Router',
@@ -19,9 +41,23 @@ const iconLabels: Record<DeviceIcon, string> = {
   generic: 'Genérico',
 }
 
-export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
+export function DevicePanel({
+  liveMonitoring,
+  placement = 'dock',
+}: {
+  liveMonitoring: boolean
+  placement?: 'dock' | 'sheet'
+}) {
+  const isMdUp = useIsMdUp()
+  const { resolvedTheme } = useTheme()
+  const badgeTheme: BadgeTheme = resolvedTheme === 'light' ? 'light' : 'dark'
   const { state, dispatch } = useStore()
   const device = useSelectedDevice()
+
+  const placementVisible =
+    (placement === 'dock' && isMdUp) || (placement === 'sheet' && !isMdUp)
+  if (!placementVisible) return null
+
   const activeMap = state.maps.find(m => m.id === state.activeMapId)
 
   const selectedLink = state.selectedLinkId
@@ -58,11 +94,16 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
     const summary = getStatusSummary(targetMap?.devices ?? [])
     
     return (
-      <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
+      <PanelSurface placement={placement}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-medium text-foreground">Submap</span>
-          <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-            <X size={14} />
+          <button
+            type="button"
+            onClick={close}
+            className="flex min-h-10 min-w-10 items-center justify-center rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <X size={18} aria-hidden />
+            <span className="sr-only">Fechar painel</span>
           </button>
         </div>
         <div className="p-4 space-y-4">
@@ -105,18 +146,23 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             Remover Submap
           </button>
         </div>
-      </aside>
+      </PanelSurface>
     )
   }
 
   if (selectedLink && linkSrc && linkTgt) {
     const capacity = getLinkCapacity(selectedLink)
     return (
-      <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
+      <PanelSurface placement={placement}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-medium text-foreground">Conexão</span>
-          <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-            <X size={14} />
+          <button
+            type="button"
+            onClick={close}
+            className="flex min-h-10 min-w-10 items-center justify-center rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <X size={18} aria-hidden />
+            <span className="sr-only">Fechar painel</span>
           </button>
         </div>
         <div className="p-4 space-y-4">
@@ -141,7 +187,7 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             )}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            No mapa, arraste o ponto na curva para ajustar o traçado; clique direito para redefinir.
+            No mapa, arraste o ponto na curva para ajustar o traçado; clique direito na linha para redefinir.
           </p>
           <button
             onClick={() => dispatch({ type: 'SET_EDITING_LINK', link: selectedLink })}
@@ -156,19 +202,24 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             Remover Conexão
           </button>
         </div>
-      </aside>
+      </PanelSurface>
     )
   }
 
   if (selectedBadge) {
-    const badgeStyle = getBadgeStyle(selectedBadge.color)
+    const badgeStyle = getBadgeStyle(selectedBadge.color, badgeTheme)
 
     return (
-      <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
+      <PanelSurface placement={placement}>
         <div className="flex items-center justify-between px-4 py-3 border-b border-border">
           <span className="text-sm font-medium text-foreground">Badge</span>
-          <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-            <X size={14} />
+          <button
+            type="button"
+            onClick={close}
+            className="flex min-h-10 min-w-10 items-center justify-center rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <X size={18} aria-hidden />
+            <span className="sr-only">Fechar painel</span>
           </button>
         </div>
         <div className="p-4 space-y-4">
@@ -199,7 +250,7 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             Remover Badge
           </button>
         </div>
-      </aside>
+      </PanelSurface>
     )
   }
 
@@ -207,17 +258,22 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
   const color = statusColorHex(device.status)
 
   return (
-    <aside className="w-64 shrink-0 flex flex-col border-l border-border bg-card h-full overflow-y-auto">
+    <PanelSurface placement={placement}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <span
             className="w-2.5 h-2.5 rounded-full shrink-0"
             style={{ backgroundColor: color }}
           />
           <span className="text-sm font-medium text-foreground truncate">{device.label}</span>
         </div>
-        <button onClick={close} className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors">
-          <X size={14} />
+        <button
+          type="button"
+          onClick={close}
+          className="flex min-h-10 min-w-10 shrink-0 items-center justify-center rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <X size={18} aria-hidden />
+          <span className="sr-only">Fechar painel</span>
         </button>
       </div>
 
@@ -326,7 +382,7 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
           Remover Dispositivo
         </button>
       </div>
-    </aside>
+    </PanelSurface>
   )
 }
 
