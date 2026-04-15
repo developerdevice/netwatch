@@ -11,10 +11,22 @@ import { NetworkCanvas } from './NetworkCanvas'
 import { DevicePanel } from './DevicePanel'
 import { TopBar } from './TopBar'
 import { ContextMenu } from './ContextMenu'
-import { CreateBadgeModal, CreateDeviceModal, CreateSubmapModal, EditBadgeModal, EditDeviceModal, EditLinkModal, EditSubmapModal, HistoryModal, PingResultModal, TracertResultModal } from './Modals'
+import {
+  CreateBadgeModal,
+  CreateDeviceModal,
+  CreateSubmapModal,
+  EditBadgeModal,
+  EditDeviceModal,
+  EditLinkEndpointModal,
+  EditLinkModal,
+  EditSubmapModal,
+  HistoryModal,
+  PingResultModal,
+  TracertResultModal,
+} from './Modals'
 import { useStatusSimulation } from '@/hooks/use-status-simulation'
 import { useLiveDeviceStatus } from '@/hooks/use-live-device-status'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 
 function SimulationRunner({ liveMonitoring }: { liveMonitoring: boolean }) {
   useStatusSimulation(!liveMonitoring)
@@ -34,6 +46,15 @@ export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
   const [zoom, setZoom] = useState(1)
   const [canvasLocked, setCanvasLocked] = useState(false)
   const fitViewRef = useRef<(() => void) | null>(null)
+  const prevActiveMapId = useRef<string | null>(null)
+
+  useEffect(() => {
+    const prev = prevActiveMapId.current
+    prevActiveMapId.current = state.activeMapId
+    if (prev !== null && prev !== state.activeMapId) {
+      startTransition(() => setMobileNavOpen(false))
+    }
+  }, [state.activeMapId])
 
   const hasPanelSelection = Boolean(
     state.selectedDeviceId ||
@@ -104,6 +125,7 @@ export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
       <EditDeviceModal />
       <EditSubmapModal />
       <EditLinkModal />
+      <EditLinkEndpointModal />
       <EditBadgeModal />
       <CreateDeviceModal />
       <CreateSubmapModal />

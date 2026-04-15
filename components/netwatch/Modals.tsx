@@ -2,6 +2,8 @@
 
 import { useStore } from '@/lib/store'
 import { AppState, BadgeColor, DeviceIcon, LinkCapacity, MapBadge } from '@/lib/types'
+import { useIsMobile } from '@/hooks/use-mobile'
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { X, Router, Radio, Server, Wifi, Antenna, Box } from 'lucide-react'
 import { useState, useEffect, useRef } from 'react'
 import { generateId } from '@/lib/utils-net'
@@ -158,19 +160,21 @@ function SingleFieldFormContent({
   submitLabel,
   onSubmit,
   onCancel,
+  fieldLabel = 'Nome',
 }: {
   initialLabel: string
   placeholder: string
   submitLabel: string
   onSubmit: (label: string) => void
   onCancel: () => void
+  fieldLabel?: string
 }) {
   const [label, setLabel] = useState(initialLabel)
 
   return (
     <div className="space-y-4">
       <div>
-        <Label>Nome</Label>
+        <Label>{fieldLabel}</Label>
         <Input value={label} onChange={setLabel} placeholder={placeholder} />
       </div>
       <div className="flex justify-end gap-2 pt-2">
@@ -335,6 +339,69 @@ export function EditSubmapModal() {
           dispatch({ type: 'UPDATE_MAP', mapId: submap.targetMapId, name: nextLabel })
         }}
       />
+    </Modal>
+  )
+}
+
+export function EditLinkEndpointModal() {
+  const { state, dispatch } = useStore()
+  const ctx = state.editingLinkEndpoint
+  const isMobile = useIsMobile()
+
+  const link =
+    ctx == null
+      ? null
+      : state.maps.find(m => m.id === ctx.mapId)?.links.find(l => l.id === ctx.linkId) ?? null
+
+  if (!ctx || !link) return null
+
+  const initial =
+    ctx.end === 'source' ? (link.sourcePortLabel ?? '') : (link.targetPortLabel ?? '')
+  const title = ctx.end === 'source' ? 'Porta na origem' : 'Porta no destino'
+  const fieldLabel = ctx.end === 'source' ? 'Identificação na origem' : 'Identificação no destino'
+
+  const onClose = () => dispatch({ type: 'SET_EDITING_LINK_ENDPOINT', payload: null })
+
+  const form = (
+    <SingleFieldFormContent
+      key={`${link.id}-${ctx.end}`}
+      initialLabel={initial}
+      placeholder="ether1, sfp1, bond0…"
+      submitLabel="Salvar"
+      fieldLabel={fieldLabel}
+      onCancel={onClose}
+      onSubmit={value => {
+        const trimmed = value.trim()
+        const patch =
+          ctx.end === 'source'
+            ? { sourcePortLabel: trimmed || undefined }
+            : { targetPortLabel: trimmed || undefined }
+        dispatch({
+          type: 'UPDATE_LINK',
+          link: { id: link.id, mapId: link.mapId, ...patch },
+        })
+      }}
+    />
+  )
+
+  if (isMobile) {
+    return (
+      <Sheet open onOpenChange={open => !open && onClose()}>
+        <SheetContent side="bottom" className="gap-0">
+          <SheetHeader className="text-left">
+            <SheetTitle>{title}</SheetTitle>
+            <SheetDescription>Identificação da interface neste lado da ligação.</SheetDescription>
+          </SheetHeader>
+          <div className="px-4 pb-6 pt-2">{form}</div>
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
+  return (
+    <Modal title={title} onClose={onClose}>
+      <p className="mb-3 text-xs text-muted-foreground">Identificação da interface neste lado da ligação (ex.: ether1).</p>
+      {form}
     </Modal>
   )
 }

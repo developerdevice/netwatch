@@ -53,6 +53,10 @@
   --link-label-surface: rgba(9, 12, 18, 0.82);
   --link-label-border: rgba(255, 255, 255, 0.1);
   --link-label-capacity-text: rgba(226, 232, 240, 0.88);
+  --link-endpoint-surface: oklch(0.16 0.02 255 / 0.92);
+  --link-endpoint-border: oklch(0.72 0.08 200 / 0.45);
+  --link-endpoint-text: oklch(0.88 0.02 255);
+  --link-endpoint-placeholder: oklch(0.5 0.02 255);
 
   --canvas-node-selection-ring: rgba(255, 255, 255, 0.28);
 }
@@ -138,6 +142,10 @@
   --link-label-surface: oklch(0.99 0.006 255 / 0.96);
   --link-label-border: oklch(0.55 0.03 255 / 0.4);
   --link-label-capacity-text: oklch(0.28 0.05 255);
+  --link-endpoint-surface: oklch(0.97 0.01 255 / 0.95);
+  --link-endpoint-border: oklch(0.45 0.08 220 / 0.55);
+  --link-endpoint-text: oklch(0.22 0.04 255);
+  --link-endpoint-placeholder: oklch(0.55 0.02 255);
 
   --canvas-node-selection-ring: oklch(0.4 0.04 255 / 0.55);
 }

@@ -2,7 +2,10 @@ import { Device, Link, MapBadge, NetworkMap, SubMapNode } from '@/lib/types'
 
 export type PersistedDevice = Pick<Device, 'id' | 'label' | 'ip' | 'icon' | 'x' | 'y' | 'mapId' | 'comment'>
 
-export type PersistedLink = Pick<Link, 'id' | 'sourceId' | 'targetId' | 'mapId' | 'capacity' | 'label' | 'controlDx' | 'controlDy'>
+export type PersistedLink = Pick<
+  Link,
+  'id' | 'sourceId' | 'targetId' | 'mapId' | 'capacity' | 'label' | 'sourcePortLabel' | 'targetPortLabel' | 'controlDx' | 'controlDy'
+>
 
 export type PersistedSubMapNode = Pick<SubMapNode, 'id' | 'label' | 'x' | 'y' | 'mapId' | 'targetMapId'>
 
@@ -44,6 +47,8 @@ function sanitizeLink(link: Link): PersistedLink {
     mapId: link.mapId,
     capacity: link.capacity,
     label: link.label,
+    sourcePortLabel: link.sourcePortLabel,
+    targetPortLabel: link.targetPortLabel,
   }
   if (link.controlDx != null && link.controlDx !== 0) {
     base.controlDx = link.controlDx

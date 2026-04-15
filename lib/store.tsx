@@ -1,7 +1,17 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react'
-import { AppState, Device, Link, MapBadge, NetworkMap, DeviceStatus, SubMapNode, HistoryEntry } from '@/lib/types'
+import {
+  AppState,
+  Device,
+  EditingLinkEndpointState,
+  Link,
+  MapBadge,
+  NetworkMap,
+  DeviceStatus,
+  SubMapNode,
+  HistoryEntry,
+} from '@/lib/types'
 import { INITIAL_MAPS } from '@/lib/mock-data'
 import { getAggregateStatus } from '@/lib/netwatch/status'
 import { cloneTopologyMaps, MAP_HISTORY_LIMIT, pruneAfterHistoryNavigation, snapshotBeforeMapMutation } from '@/lib/netwatch/map-history'
@@ -38,6 +48,7 @@ type Action =
   | { type: 'SET_EDITING_DEVICE'; device: Device | null }
   | { type: 'SET_EDITING_SUBMAP'; submap: SubMapNode | null }
   | { type: 'SET_EDITING_LINK'; link: Link | null }
+  | { type: 'SET_EDITING_LINK_ENDPOINT'; payload: EditingLinkEndpointState | null }
   | { type: 'SET_EDITING_BADGE'; badge: MapBadge | null }
   | { type: 'OPEN_CREATE_DEVICE'; draft: NonNullable<AppState['creatingDevice']> }
   | { type: 'CLOSE_CREATE_DEVICE' }
@@ -80,6 +91,7 @@ function createInitialState(maps: NetworkMap[] = INITIAL_MAPS): AppState {
     editingDevice: null,
     editingSubmap: null,
     editingLink: null,
+    editingLinkEndpoint: null,
     editingBadge: null,
     creatingDevice: null,
     creatingSubmap: null,
@@ -155,19 +167,48 @@ function reducer(state: AppState, action: Action): AppState {
         selectedBadgeId: null,
         contextMenu: null,
         pendingLinkSourceId: null,
+        editingLinkEndpoint: null,
       }
 
     case 'SELECT_DEVICE':
-      return { ...state, selectedDeviceId: action.deviceId, selectedLinkId: null, selectedSubmapId: null, selectedBadgeId: null }
+      return {
+        ...state,
+        selectedDeviceId: action.deviceId,
+        selectedLinkId: null,
+        selectedSubmapId: null,
+        selectedBadgeId: null,
+        editingLinkEndpoint: null,
+      }
 
     case 'SELECT_LINK':
-      return { ...state, selectedLinkId: action.linkId, selectedDeviceId: null, selectedSubmapId: null, selectedBadgeId: null }
+      return {
+        ...state,
+        selectedLinkId: action.linkId,
+        selectedDeviceId: null,
+        selectedSubmapId: null,
+        selectedBadgeId: null,
+        editingLinkEndpoint: null,
+      }
 
     case 'SELECT_SUBMAP':
-      return { ...state, selectedSubmapId: action.submapId, selectedDeviceId: null, selectedLinkId: null, selectedBadgeId: null }
+      return {
+        ...state,
+        selectedSubmapId: action.submapId,
+        selectedDeviceId: null,
+        selectedLinkId: null,
+        selectedBadgeId: null,
+        editingLinkEndpoint: null,
+      }
 
     case 'SELECT_BADGE':
-      return { ...state, selectedBadgeId: action.badgeId, selectedDeviceId: null, selectedLinkId: null, selectedSubmapId: null }
+      return {
+        ...state,
+        selectedBadgeId: action.badgeId,
+        selectedDeviceId: null,
+        selectedLinkId: null,
+        selectedSubmapId: null,
+        editingLinkEndpoint: null,
+      }
 
     case 'ADD_DEVICE': {
       const h = snapshotBeforeMapMutation(state)
@@ -268,6 +309,7 @@ function reducer(state: AppState, action: Action): AppState {
             : map
         ),
         editingLink: null,
+        editingLinkEndpoint: null,
       }
     }
 
@@ -282,6 +324,8 @@ function reducer(state: AppState, action: Action): AppState {
             : m
         ),
         selectedLinkId: state.selectedLinkId === action.linkId ? null : state.selectedLinkId,
+        editingLinkEndpoint:
+          state.editingLinkEndpoint?.linkId === action.linkId ? null : state.editingLinkEndpoint,
         contextMenu: null,
       }
     }
@@ -484,7 +528,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, editingSubmap: action.submap, contextMenu: null }
 
     case 'SET_EDITING_LINK':
-      return { ...state, editingLink: action.link, contextMenu: null }
+      return { ...state, editingLink: action.link, editingLinkEndpoint: null, contextMenu: null }
+
+    case 'SET_EDITING_LINK_ENDPOINT':
+      return { ...state, editingLinkEndpoint: action.payload, contextMenu: null }
 
     case 'SET_EDITING_BADGE':
       return { ...state, editingBadge: action.badge, contextMenu: null }

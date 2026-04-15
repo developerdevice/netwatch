@@ -14,7 +14,7 @@ function getSnapshot() {
   return window.matchMedia(QUERY).matches
 }
 
-/** SSR / prerender: assume desktop para evitar layout “mobile” no servidor. */
+/** SSR / prerender: assume desktop para evitar layout "mobile" no servidor. */
 function getServerSnapshot() {
   return true
 }

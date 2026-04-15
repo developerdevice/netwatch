@@ -11,7 +11,7 @@ interface TopBarProps {
   session?: ActiveServerSessionSummary
   canvasLocked: boolean
   onToggleCanvasLocked: () => void
-  /** Abre navegação de mapas/dispositivos (sheet mobile). */
+  /** Abre navegação de mapas e dispositivos (sheet em viewports estreitas). */
   onOpenMobileNav?: () => void
 }
 

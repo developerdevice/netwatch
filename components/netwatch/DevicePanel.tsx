@@ -2,7 +2,6 @@
 
 import type { ReactNode } from 'react'
 import { useTheme } from 'next-themes'
-import { useIsMdUp } from '@/hooks/use-is-md-up'
 import { useStore, useSelectedDevice } from '@/lib/store'
 import { statusColorHex, statusLabel } from '@/lib/utils-net'
 import { X, Activity, Route, History, Edit, Link2 } from 'lucide-react'
@@ -11,6 +10,7 @@ import { getBadgeColorLabel, getBadgeStyle, type BadgeTheme } from '@/lib/netwat
 import { clearSelection, openDeviceHistory, openDevicePing, openDeviceTracert } from '@/lib/netwatch/commands'
 import { getLinkCapacity, getLinkCapacityLabel } from '@/lib/netwatch/links'
 import { getStatusSummary } from '@/lib/netwatch/status'
+import { useIsMdUp } from '@/hooks/use-is-md-up'
 
 const dockAsideClass =
   'hidden h-full w-full max-w-none shrink-0 flex flex-col border-l border-border bg-card overflow-y-auto md:flex md:w-64'
@@ -92,10 +92,9 @@ export function DevicePanel({
   if (selectedSubmap) {
     const targetMap = state.maps.find(m => m.id === selectedSubmap.targetMapId)
     const summary = getStatusSummary(targetMap?.devices ?? [])
-    
     return (
       <PanelSurface placement={placement}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-foreground">Submap</span>
           <button
             type="button"
@@ -106,7 +105,7 @@ export function DevicePanel({
             <span className="sr-only">Fechar painel</span>
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div>
             <p className="text-xs text-muted-foreground mb-1">Nome</p>
             <p className="text-sm font-medium text-foreground">{selectedSubmap.label}</p>
@@ -154,7 +153,7 @@ export function DevicePanel({
     const capacity = getLinkCapacity(selectedLink)
     return (
       <PanelSurface placement={placement}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-foreground">Conexão</span>
           <button
             type="button"
@@ -165,15 +164,21 @@ export function DevicePanel({
             <span className="sr-only">Fechar painel</span>
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div className="space-y-2">
             <div>
               <p className="text-xs text-muted-foreground">Origem</p>
               <p className="text-sm font-medium text-foreground">{linkSrc}</p>
+              {selectedLink.sourcePortLabel ? (
+                <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{selectedLink.sourcePortLabel}</p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Destino</p>
               <p className="text-sm font-medium text-foreground">{linkTgt}</p>
+              {selectedLink.targetPortLabel ? (
+                <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{selectedLink.targetPortLabel}</p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Capacidade</p>
@@ -187,7 +192,7 @@ export function DevicePanel({
             )}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            No mapa, arraste o ponto na curva para ajustar o traçado; clique direito na linha para redefinir.
+            No mapa, identifique cada porta nas etiquetas junto à linha (duplo clique ou toque longo). Arraste o ponto na curva para ajustar o traçado; toque longo ou clique direito na linha para o menu.
           </p>
           <button
             onClick={() => dispatch({ type: 'SET_EDITING_LINK', link: selectedLink })}
@@ -211,7 +216,7 @@ export function DevicePanel({
 
     return (
       <PanelSurface placement={placement}>
-        <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <span className="text-sm font-medium text-foreground">Badge</span>
           <button
             type="button"
@@ -222,7 +227,7 @@ export function DevicePanel({
             <span className="sr-only">Fechar painel</span>
           </button>
         </div>
-        <div className="p-4 space-y-4">
+        <div className="space-y-4 p-4">
           <div
             className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold"
             style={{
@@ -259,13 +264,13 @@ export function DevicePanel({
 
   return (
     <PanelSurface placement={placement}>
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="flex min-w-0 items-center gap-2">
           <span
-            className="w-2.5 h-2.5 rounded-full shrink-0"
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
             style={{ backgroundColor: color }}
           />
-          <span className="text-sm font-medium text-foreground truncate">{device.label}</span>
+          <span className="truncate text-sm font-medium text-foreground">{device.label}</span>
         </div>
         <button
           type="button"
@@ -277,7 +282,7 @@ export function DevicePanel({
         </button>
       </div>
 
-      <div className="p-4 space-y-4 flex-1">
+      <div className="flex-1 space-y-4 p-4">
         {/* Status badge */}
         <div
           className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium"
