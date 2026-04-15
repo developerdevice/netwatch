@@ -3,7 +3,8 @@
 import { useStore, useActiveMap } from '@/lib/store'
 import { NetworkMap, DeviceStatus } from '@/lib/types'
 import { ChevronRight, ChevronDown, Layers, ChevronLeft, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { cn } from '@/lib/utils'
 import { getMapStatuses } from '@/lib/netwatch/status'
 
@@ -104,7 +105,13 @@ function MapTreeItem({ map, allMaps, level, activeMapId, searchQuery, onSelect, 
   )
 }
 
-export function Sidebar() {
+interface SidebarNavProps {
+  /** Chamado após escolher mapa ou dispositivo (ex.: fechar sheet mobile). */
+  onNavigate?: () => void
+}
+
+export function SidebarNav({ onNavigate }: SidebarNavProps) {
+  const searchFieldId = useId()
   const { state, dispatch } = useStore()
   const activeMap = useActiveMap()
   const statuses = useSubmapStatuses()
@@ -138,7 +145,7 @@ export function Sidebar() {
   const breadcrumb = getBreadcrumb()
 
   return (
-    <aside className="panel-surface flex h-full w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border">
+    <div className="panel-surface flex h-full min-h-0 w-full flex-col overflow-hidden border-sidebar-border md:border-r">
       <div className="flex items-center gap-3 border-b border-sidebar-border px-6 py-5">
         <div className="flex size-10 items-center justify-center rounded-2xl bg-foreground text-background shadow-lg">
           <Layers size={16} className="text-background" />
@@ -154,7 +161,10 @@ export function Sidebar() {
           <button
             onClick={() => {
               const parent = state.maps.find(m => m.id === activeMap.parentId)
-              if (parent) dispatch({ type: 'SET_ACTIVE_MAP', mapId: parent.id })
+              if (parent) {
+                dispatch({ type: 'SET_ACTIVE_MAP', mapId: parent.id })
+                onNavigate?.()
+              }
             }}
             className="flex items-center gap-2 text-xs text-muted-foreground transition-colors hover:text-sidebar-foreground"
           >
@@ -165,7 +175,7 @@ export function Sidebar() {
       )}
 
       <div className="border-b border-sidebar-border px-4 py-3">
-        <label className="sr-only" htmlFor="sidebar-search">
+        <label className="sr-only" htmlFor={searchFieldId}>
           Buscar mapas e dispositivos
         </label>
         <div className="relative">
@@ -175,7 +185,7 @@ export function Sidebar() {
             aria-hidden
           />
           <input
-            id="sidebar-search"
+            id={searchFieldId}
             type="search"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
@@ -187,7 +197,7 @@ export function Sidebar() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 min-h-0 overflow-y-auto">
         <div className="py-4">
           <div className="px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             Mapas
@@ -204,7 +214,10 @@ export function Sidebar() {
                   level={0}
                   activeMapId={state.activeMapId}
                   searchQuery={searchQuery}
-                  onSelect={mapId => dispatch({ type: 'SET_ACTIVE_MAP', mapId })}
+                  onSelect={mapId => {
+                    dispatch({ type: 'SET_ACTIVE_MAP', mapId })
+                    onNavigate?.()
+                  }}
                   statuses={statuses}
                 />
               ))
@@ -242,7 +255,10 @@ export function Sidebar() {
                         ? 'bg-accent text-accent-foreground shadow-sm'
                         : 'text-sidebar-foreground/80 hover:bg-accent/50'
                     )}
-                    onClick={() => dispatch({ type: 'SELECT_DEVICE', deviceId: device.id })}
+                    onClick={() => {
+                      dispatch({ type: 'SELECT_DEVICE', deviceId: device.id })
+                      onNavigate?.()
+                    }}
                   >
                     <StatusDot status={device.status} />
                     <span className="truncate flex-1">{device.label}</span>
@@ -261,6 +277,32 @@ export function Sidebar() {
           <span>{activeMap.submapNodes.length} submaps</span>
         </div>
       </div>
+    </div>
+  )
+}
+
+export function Sidebar() {
+  return (
+    <aside className="hidden h-full w-72 shrink-0 md:flex">
+      <SidebarNav />
     </aside>
+  )
+}
+
+interface MobileSidebarSheetProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}
+
+export function MobileSidebarSheet({ open, onOpenChange }: MobileSidebarSheetProps) {
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="left"
+        className="h-[100dvh] w-[min(100vw-1rem,22rem)] max-w-none gap-0 border-r p-0 sm:max-w-none"
+      >
+        <SidebarNav onNavigate={() => onOpenChange(false)} />
+      </SheetContent>
+    </Sheet>
   )
 }

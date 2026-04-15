@@ -39,6 +39,8 @@ npm install
 npm run dev
 ```
 
+O `npm install` aplica patches versionados em `patches/` (via `patch-package`); detalhes na secao **Patches de dependencias** em [`docs/CONTRIB.md`](docs/CONTRIB.md).
+
 Abra [http://localhost:3000](http://localhost:3000).
 
 Copie `.env.example` para `.env` e ajuste: caminho do SQLite, limites de rate, Redis/sessao em cluster, chave do registo de servidores em producao, e (quando existir integracao) `NETWATCH_API_*`.

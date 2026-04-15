@@ -1,8 +1,11 @@
 'use client'
 
-import { ActiveServerSessionSummary } from '@/lib/types'
+import { Sheet, SheetContent } from '@/components/ui/sheet'
+import { useIsMdUp } from '@/hooks/use-is-md-up'
+import { clearSelection } from '@/lib/netwatch/commands'
 import { useStore } from '@/lib/store'
-import { Sidebar } from './Sidebar'
+import { ActiveServerSessionSummary } from '@/lib/types'
+import { MobileSidebarSheet, Sidebar } from './Sidebar'
 import { Toolbar } from './Toolbar'
 import { NetworkCanvas } from './NetworkCanvas'
 import { DevicePanel } from './DevicePanel'
@@ -23,9 +26,7 @@ import {
 } from './Modals'
 import { useStatusSimulation } from '@/hooks/use-status-simulation'
 import { useLiveDeviceStatus } from '@/hooks/use-live-device-status'
-import { useRef, useState, useCallback, useEffect, startTransition } from 'react'
-import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { useIsMdUp } from '@/hooks/use-is-md-up'
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 
 function SimulationRunner({ liveMonitoring }: { liveMonitoring: boolean }) {
   useStatusSimulation(!liveMonitoring)
@@ -39,8 +40,8 @@ interface NetWatchAppProps {
 }
 
 export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
-  const { state } = useStore()
   const isMdUp = useIsMdUp()
+  const { state, dispatch } = useStore()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [zoom, setZoom] = useState(1)
   const [canvasLocked, setCanvasLocked] = useState(false)
@@ -55,6 +56,14 @@ export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
     }
   }, [state.activeMapId])
 
+  const hasPanelSelection = Boolean(
+    state.selectedDeviceId ||
+      state.selectedLinkId ||
+      state.selectedSubmapId ||
+      state.selectedBadgeId
+  )
+  const showMobileDetailSheet = !isMdUp && hasPanelSelection
+
   const zoomIn = useCallback(() => setZoom(z => Math.min(3, z * 1.2)), [])
   const zoomOut = useCallback(() => setZoom(z => Math.max(0.2, z / 1.2)), [])
   const fitView = useCallback(() => {
@@ -65,18 +74,9 @@ export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
     <>
       <SimulationRunner liveMonitoring={liveMonitoring} />
       <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
-        {isMdUp ? (
-          <div className="hidden h-full w-72 shrink-0 md:flex md:flex-col">
-            <Sidebar />
-          </div>
-        ) : null}
-        {!isMdUp ? (
-          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-            <SheetContent side="left" className="w-[min(100vw,20rem)] border-r border-sidebar-border p-0">
-              <Sidebar />
-            </SheetContent>
-          </Sheet>
-        ) : null}
+        <Sidebar />
+
+        <MobileSidebarSheet open={!isMdUp && mobileNavOpen} onOpenChange={setMobileNavOpen} />
 
         {/* Main area */}
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
@@ -91,18 +91,32 @@ export function NetWatchApp({ session, liveMonitoring }: NetWatchAppProps) {
           {/* Toolbar */}
           <Toolbar zoom={zoom} onZoomIn={zoomIn} onZoomOut={zoomOut} onFitView={fitView} />
 
-          {/* Canvas + panel */}
-          <div className="flex-1 flex overflow-hidden">
+          {/* Canvas + panel (painel lateral só em md+) */}
+          <div className="flex min-h-0 flex-1 overflow-hidden">
             <NetworkCanvas
               zoom={zoom}
               isCanvasLocked={canvasLocked}
               onZoomChange={setZoom}
               onFitViewReady={fn => { fitViewRef.current = fn }}
             />
-            <DevicePanel liveMonitoring={liveMonitoring} />
+            <DevicePanel liveMonitoring={liveMonitoring} placement="dock" />
           </div>
         </div>
       </div>
+
+      <Sheet
+        open={showMobileDetailSheet}
+        onOpenChange={open => {
+          if (!open) clearSelection(dispatch)
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          className="flex max-h-[min(88dvh,720px)] w-full max-w-none min-h-0 flex-col gap-0 rounded-t-2xl border-t p-0 sm:max-w-none"
+        >
+          <DevicePanel liveMonitoring={liveMonitoring} placement="sheet" />
+        </SheetContent>
+      </Sheet>
 
       {/* Context Menu */}
       <ContextMenu />

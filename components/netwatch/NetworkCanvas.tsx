@@ -20,7 +20,7 @@ type CanvasClipboard =
   | { kind: 'submap'; node: SubMapNode }
 import { clearSelection, deleteCurrentSelection } from '@/lib/netwatch/commands'
 import { getStatusSummary, getSubmapNodeStatuses } from '@/lib/netwatch/status'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type TouchEvent } from 'react'
 import { useStore, useActiveMap } from '@/lib/store'
 import { generateId } from '@/lib/utils-net'
 import { LinkPath } from './canvas/LinkPath'
@@ -60,6 +60,10 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 })
   const canvasClipboardRef = useRef<CanvasClipboard | null>(null)
   const backgroundPanCandidateRef = useRef<{ sx: number; sy: number } | null>(null)
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const longPressOriginRef = useRef<{ x: number; y: number } | null>(null)
+  const LONG_PRESS_MS = 520
+  const LONG_PRESS_MOVE_PX = 14
 
   const submapStatuses = useMemo(() => getSubmapNodeStatuses(state.maps), [state.maps])
   const submapSummaries = useMemo(() => {
@@ -619,6 +623,190 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
     })
   }
 
+  const cancelLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current)
+      longPressTimerRef.current = null
+    }
+    longPressOriginRef.current = null
+  }, [])
+
+  const scheduleLongPress = useCallback(
+    (clientX: number, clientY: number, onFire: () => void) => {
+      cancelLongPress()
+      longPressOriginRef.current = { x: clientX, y: clientY }
+      longPressTimerRef.current = setTimeout(() => {
+        longPressTimerRef.current = null
+        longPressOriginRef.current = null
+        onFire()
+      }, LONG_PRESS_MS)
+    },
+    [cancelLongPress]
+  )
+
+  const updateLongPressMove = useCallback(
+    (clientX: number, clientY: number) => {
+      const o = longPressOriginRef.current
+      if (!o || !longPressTimerRef.current) return
+      if (Math.hypot(clientX - o.x, clientY - o.y) > LONG_PRESS_MOVE_PX) {
+        cancelLongPress()
+      }
+    },
+    [cancelLongPress]
+  )
+
+  useEffect(() => {
+    const end = () => cancelLongPress()
+    document.addEventListener('touchend', end, { capture: true })
+    document.addEventListener('touchcancel', end, { capture: true })
+    return () => {
+      document.removeEventListener('touchend', end, { capture: true })
+      document.removeEventListener('touchcancel', end, { capture: true })
+    }
+  }, [cancelLongPress])
+
+  const openCanvasContextAt = useCallback(
+    (clientX: number, clientY: number) => {
+      dispatch({
+        type: 'OPEN_CONTEXT_MENU',
+        menu: {
+          type: 'canvas',
+          x: clientX,
+          y: clientY,
+          canvasPoint: screenToCanvas(clientX, clientY),
+        },
+      })
+    },
+    [dispatch, screenToCanvas]
+  )
+
+  const canvasBgTouchHandlers = useMemo(
+    () => ({
+      onTouchStart: (e: TouchEvent<SVGRectElement>) => {
+        if (state.contextMenu) dispatch({ type: 'CLOSE_CONTEXT_MENU' })
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        scheduleLongPress(t.clientX, t.clientY, () => openCanvasContextAt(t.clientX, t.clientY))
+      },
+      onTouchMove: (e: TouchEvent<SVGRectElement>) => {
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        updateLongPressMove(t.clientX, t.clientY)
+      },
+      onTouchEnd: cancelLongPress,
+      onTouchCancel: cancelLongPress,
+    }),
+    [cancelLongPress, dispatch, openCanvasContextAt, scheduleLongPress, state.contextMenu, updateLongPressMove]
+  )
+
+  const linkHitTouchHandlers = useCallback(
+    (link: Link) => ({
+      onHitTouchStart: (e: TouchEvent<SVGPathElement>) => {
+        if (state.pendingLinkSourceId) return
+        e.stopPropagation()
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        if (state.contextMenu) dispatch({ type: 'CLOSE_CONTEXT_MENU' })
+        scheduleLongPress(t.clientX, t.clientY, () => {
+          dispatch({ type: 'SELECT_LINK', linkId: link.id })
+          dispatch({
+            type: 'OPEN_CONTEXT_MENU',
+            menu: { type: 'link', x: t.clientX, y: t.clientY, targetId: link.id },
+          })
+        })
+      },
+      onHitTouchMove: (e: TouchEvent<SVGPathElement>) => {
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        updateLongPressMove(t.clientX, t.clientY)
+      },
+      onHitTouchEnd: cancelLongPress,
+      onHitTouchCancel: cancelLongPress,
+    }),
+    [cancelLongPress, dispatch, scheduleLongPress, state.contextMenu, state.pendingLinkSourceId, updateLongPressMove]
+  )
+
+  const deviceTouchHandlers = useCallback(
+    (device: Device) => ({
+      onTouchStart: (e: TouchEvent<SVGGElement>) => {
+        if (state.pendingLinkSourceId) return
+        e.stopPropagation()
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        if (state.contextMenu) dispatch({ type: 'CLOSE_CONTEXT_MENU' })
+        scheduleLongPress(t.clientX, t.clientY, () => {
+          dispatch({ type: 'SELECT_DEVICE', deviceId: device.id })
+          dispatch({
+            type: 'OPEN_CONTEXT_MENU',
+            menu: { type: 'device', x: t.clientX, y: t.clientY, targetId: device.id },
+          })
+        })
+      },
+      onTouchMove: (e: TouchEvent<SVGGElement>) => {
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        updateLongPressMove(t.clientX, t.clientY)
+      },
+      onTouchEnd: cancelLongPress,
+      onTouchCancel: cancelLongPress,
+    }),
+    [cancelLongPress, dispatch, scheduleLongPress, state.contextMenu, state.pendingLinkSourceId, updateLongPressMove]
+  )
+
+  const submapTouchHandlers = useCallback(
+    (node: SubMapNode) => ({
+      onTouchStart: (e: TouchEvent<SVGGElement>) => {
+        if (state.pendingLinkSourceId) return
+        e.stopPropagation()
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        if (state.contextMenu) dispatch({ type: 'CLOSE_CONTEXT_MENU' })
+        scheduleLongPress(t.clientX, t.clientY, () => {
+          dispatch({ type: 'SELECT_SUBMAP', submapId: node.id })
+          dispatch({
+            type: 'OPEN_CONTEXT_MENU',
+            menu: { type: 'submap', x: t.clientX, y: t.clientY, targetId: node.id },
+          })
+        })
+      },
+      onTouchMove: (e: TouchEvent<SVGGElement>) => {
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        updateLongPressMove(t.clientX, t.clientY)
+      },
+      onTouchEnd: cancelLongPress,
+      onTouchCancel: cancelLongPress,
+    }),
+    [cancelLongPress, dispatch, scheduleLongPress, state.contextMenu, state.pendingLinkSourceId, updateLongPressMove]
+  )
+
+  const badgeTouchHandlers = useCallback(
+    (badge: MapBadge) => ({
+      onTouchStart: (e: TouchEvent<SVGGElement>) => {
+        if (state.pendingLinkSourceId) return
+        e.stopPropagation()
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        if (state.contextMenu) dispatch({ type: 'CLOSE_CONTEXT_MENU' })
+        scheduleLongPress(t.clientX, t.clientY, () => {
+          dispatch({ type: 'SELECT_BADGE', badgeId: badge.id })
+          dispatch({
+            type: 'OPEN_CONTEXT_MENU',
+            menu: { type: 'badge', x: t.clientX, y: t.clientY, targetId: badge.id },
+          })
+        })
+      },
+      onTouchMove: (e: TouchEvent<SVGGElement>) => {
+        if (e.touches.length !== 1) return
+        const t = e.touches[0]
+        updateLongPressMove(t.clientX, t.clientY)
+      },
+      onTouchEnd: cancelLongPress,
+      onTouchCancel: cancelLongPress,
+    }),
+    [cancelLongPress, dispatch, scheduleLongPress, state.contextMenu, state.pendingLinkSourceId, updateLongPressMove]
+  )
+
   const temporaryLinkPath = selectedLinkSource
     ? buildCurvedLinkPath(selectedLinkSource, pointerCanvasPoint)
     : null
@@ -641,7 +829,7 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
           ref={svgRef}
           width={canvasSize.width}
           height={canvasSize.height}
-          className="block select-none"
+          className="block touch-manipulation select-none"
           style={{ cursor: svgCursor, background: 'var(--canvas-bg)' }}
           onMouseDown={handleSvgMouseDown}
           onMouseMove={handleSvgMouseMove}
@@ -667,7 +855,13 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
             </pattern>
           </defs>
 
-          <rect id="canvas-bg" width={canvasSize.width} height={canvasSize.height} fill="url(#grid)" />
+          <rect
+            id="canvas-bg"
+            width={canvasSize.width}
+            height={canvasSize.height}
+            fill="url(#grid)"
+            {...canvasBgTouchHandlers}
+          />
 
           <g transform={`translate(${CANVAS_ORIGIN.x + pan.x}, ${CANVAS_ORIGIN.y + pan.y}) scale(${zoom})`}>
             {linksRenderOrder.map(link => (
@@ -687,6 +881,7 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
                 }}
                 onContextMenu={event => handleLinkContextMenu(event, link)}
                 onControlHandleMouseDown={event => handleLinkControlMouseDown(event, link)}
+                {...linkHitTouchHandlers(link)}
                 onEndpointSelect={() => dispatch({ type: 'SELECT_LINK', linkId: link.id })}
                 onEndpointEditRequest={end =>
                   dispatch({
@@ -719,6 +914,7 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
                 onMouseDown={event => handleSubmapMouseDown(event, node)}
                 onDoubleClick={event => handleSubmapDoubleClick(event, node)}
                 onContextMenu={event => handleSubmapContextMenu(event, node)}
+                {...submapTouchHandlers(node)}
               />
             ))}
 
@@ -729,6 +925,7 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
                 isSelected={state.selectedBadgeId === badge.id}
                 onMouseDown={event => handleBadgeMouseDown(event, badge)}
                 onContextMenu={event => handleBadgeContextMenu(event, badge)}
+                {...badgeTouchHandlers(badge)}
               />
             ))}
 
@@ -740,6 +937,7 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
                 isLinkSource={state.pendingLinkSourceId === device.id}
                 onMouseDown={event => handleDeviceMouseDown(event, device)}
                 onContextMenu={event => handleDeviceContextMenu(event, device)}
+                {...deviceTouchHandlers(device)}
               />
             ))}
           </g>
@@ -749,7 +947,8 @@ export function NetworkCanvas({ zoom, isCanvasLocked, onZoomChange, onFitViewRea
           <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
             <p className="text-sm text-muted-foreground">Nenhum item neste mapa</p>
             <p className="mt-1 text-xs text-muted-foreground/60">
-              Clique com o botão direito para adicionar
+              <span className="md:hidden">Menu no fundo do mapa para adicionar itens</span>
+              <span className="hidden md:inline">Clique com o botão direito no fundo para adicionar</span>
             </p>
           </div>
         )}

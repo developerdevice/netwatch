@@ -18,6 +18,10 @@ interface LinkPathProps {
   onControlHandleMouseDown: (event: MouseEvent<SVGCircleElement>) => void
   onEndpointSelect: (end: 'source' | 'target') => void
   onEndpointEditRequest: (end: 'source' | 'target') => void
+  onHitTouchStart?: (event: TouchEvent<SVGPathElement>) => void
+  onHitTouchMove?: (event: TouchEvent<SVGPathElement>) => void
+  onHitTouchEnd?: (event: TouchEvent<SVGPathElement>) => void
+  onHitTouchCancel?: (event: TouchEvent<SVGPathElement>) => void
 }
 
 function LinkPortEndpoint({
@@ -156,6 +160,10 @@ export function LinkPath({
   onControlHandleMouseDown,
   onEndpointSelect,
   onEndpointEditRequest,
+  onHitTouchStart,
+  onHitTouchMove,
+  onHitTouchEnd,
+  onHitTouchCancel,
 }: LinkPathProps) {
   const source = nodeResolver(link.sourceId)
   const target = nodeResolver(link.targetId)
@@ -185,6 +193,10 @@ export function LinkPath({
         style={{ cursor: 'pointer' }}
         onClick={onClick}
         onContextMenu={onContextMenu}
+        onTouchStart={onHitTouchStart}
+        onTouchMove={onHitTouchMove}
+        onTouchEnd={onHitTouchEnd}
+        onTouchCancel={onHitTouchCancel}
       />
 
       <path

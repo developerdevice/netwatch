@@ -3,7 +3,7 @@
 import { DeviceStatus, SubMapNode as SubMapNodeType } from '@/lib/types'
 import { truncateNodeLabel } from '@/lib/netwatch/map-geometry'
 import { statusColorHex } from '@/lib/utils-net'
-import { MouseEvent } from 'react'
+import { MouseEvent, TouchEvent } from 'react'
 import { StatusSummary } from '@/lib/netwatch/status'
 
 interface SubmapNodeProps {
@@ -15,6 +15,10 @@ interface SubmapNodeProps {
   onMouseDown: (event: MouseEvent<SVGGElement>) => void
   onDoubleClick: (event: MouseEvent<SVGGElement>) => void
   onContextMenu: (event: MouseEvent<SVGGElement>) => void
+  onTouchStart?: (event: TouchEvent<SVGGElement>) => void
+  onTouchMove?: (event: TouchEvent<SVGGElement>) => void
+  onTouchEnd?: (event: TouchEvent<SVGGElement>) => void
+  onTouchCancel?: (event: TouchEvent<SVGGElement>) => void
 }
 
 export function SubmapNode({
@@ -26,6 +30,10 @@ export function SubmapNode({
   onMouseDown,
   onDoubleClick,
   onContextMenu,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
 }: SubmapNodeProps) {
   const color = statusColorHex(status)
   const radiusX = 72
@@ -37,6 +45,10 @@ export function SubmapNode({
       onMouseDown={onMouseDown}
       onDoubleClick={onDoubleClick}
       onContextMenu={onContextMenu}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
       style={{ cursor: isLinkSource ? 'crosshair' : 'pointer' }}
     >
       {isSelected && (
