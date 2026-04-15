@@ -27,8 +27,19 @@ export interface Link {
   rxBps?: number
   txBps?: number
   label?: string
+  /** Identificação da porta/interface no nó de origem (ex.: ether1). */
+  sourcePortLabel?: string
+  /** Identificação da porta/interface no nó de destino. */
+  targetPortLabel?: string
   controlDx?: number
   controlDy?: number
+}
+
+/** Estado do diálogo de edição de rótulo de porta numa extremidade da ligação. */
+export interface EditingLinkEndpointState {
+  linkId: string
+  mapId: string
+  end: 'source' | 'target'
 }
 
 export interface SubMapNode {
@@ -115,6 +126,7 @@ export interface AppState {
   editingDevice: Device | null
   editingSubmap: SubMapNode | null
   editingLink: Link | null
+  editingLinkEndpoint: EditingLinkEndpointState | null
   editingBadge: MapBadge | null
   creatingDevice: CreateNodeDraft | null
   creatingSubmap: CreateNodeDraft | null

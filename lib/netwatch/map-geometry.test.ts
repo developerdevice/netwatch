@@ -37,6 +37,10 @@ describe('map-geometry', () => {
     expect(result.labelPoint.x).not.toBeNaN()
     expect(result.labelPoint.y).not.toBeNaN()
     expect(result.controlPoint).toBeDefined()
+    expect(result.sourceEndpointLabelPoint).toBeDefined()
+    expect(result.targetEndpointLabelPoint).toBeDefined()
+    expect(result.sourceEndpointLabelPoint.x).not.toBeNaN()
+    expect(result.targetEndpointLabelPoint.x).not.toBeNaN()
   })
 
   it('aplica deslocamento manual ao ponto de controle', () => {

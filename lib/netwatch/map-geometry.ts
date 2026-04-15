@@ -1,4 +1,4 @@
-import { CanvasPoint, Device, Link, SubMapNode } from '@/lib/types'
+import type { CanvasPoint, Device, Link, SubMapNode } from '@/lib/types'
 
 export const MAP_NODE_SIZE = 56
 export const MAP_GRID_SIZE = 20
@@ -81,6 +81,60 @@ export interface LinkCurveControlOffset {
   dy?: number
 }
 
+function quadBezierPoint(p0: CanvasPoint, p1: CanvasPoint, p2: CanvasPoint, t: number): CanvasPoint {
+  const u = 1 - t
+  return {
+    x: u * u * p0.x + 2 * u * t * p1.x + t * t * p2.x,
+    y: u * u * p0.y + 2 * u * t * p1.y + t * t * p2.y,
+  }
+}
+
+function quadBezierDerivative(p0: CanvasPoint, p1: CanvasPoint, p2: CanvasPoint, t: number): CanvasPoint {
+  return {
+    x: -2 * (1 - t) * p0.x + 2 * (1 - 2 * t) * p1.x + 2 * t * p2.x,
+    y: -2 * (1 - t) * p0.y + 2 * (1 - 2 * t) * p1.y + 2 * t * p2.y,
+  }
+}
+
+function unitVector(v: CanvasPoint): CanvasPoint {
+  const len = Math.hypot(v.x, v.y) || 1
+  return { x: v.x / len, y: v.y / len }
+}
+
+/** Rótulo de porta junto ao traço Q, acompanha o ponto de controlo ao arrastar a curva. */
+function linkEndpointLabelOnQuad(
+  p0: CanvasPoint,
+  p1: CanvasPoint,
+  p2: CanvasPoint,
+  fromStart: boolean,
+  chordNormal: CanvasPoint,
+  halfNode: number,
+  chordLength: number,
+): CanvasPoint {
+  const tAlong = Math.min(
+    0.4,
+    Math.max(0.045, (halfNode + 28) / Math.max(chordLength * 0.82, 48)),
+  )
+  const t = fromStart ? tAlong : 1 - tAlong
+  const pt = quadBezierPoint(p0, p1, p2, t)
+  const deriv = quadBezierDerivative(p0, p1, p2, t)
+  const tan = unitVector(deriv)
+  let side = { x: -tan.y, y: tan.x }
+  const sideLen = Math.hypot(side.x, side.y) || 1
+  side = { x: side.x / sideLen, y: side.y / sideLen }
+  if (side.x * chordNormal.x + side.y * chordNormal.y < 0) {
+    side = { x: -side.x, y: -side.y }
+  }
+  const approxAlongCurve = chordLength * tAlong * 1.05
+  const shortfall = Math.max(0, halfNode + 26 - approxAlongCurve)
+  const outMag = 12 + shortfall * 0.72
+
+  return {
+    x: roundPathCoord(pt.x + side.x * outMag),
+    y: roundPathCoord(pt.y + side.y * outMag),
+  }
+}
+
 export function buildCurvedLinkPath(
   source: CanvasPoint,
   target: CanvasPoint,
@@ -95,10 +149,13 @@ export function buildCurvedLinkPath(
     const sy = roundPathCoord(source.y)
     const tx = roundPathCoord(target.x)
     const ty = roundPathCoord(target.y)
+    const bump = MAP_NODE_SIZE / 2 + 26
     return {
       pathD: `M ${sx} ${sy} L ${tx} ${ty}`,
       labelPoint: { x: sx, y: roundPathCoord(sy - 8) },
       controlPoint: { x: sx, y: sy },
+      sourceEndpointLabelPoint: { x: sx, y: roundPathCoord(sy - bump) },
+      targetEndpointLabelPoint: { x: tx, y: roundPathCoord(ty - bump) },
     }
   }
 
@@ -112,9 +169,25 @@ export function buildCurvedLinkPath(
   const controlX = roundPathCoord(auto.x + odx)
   const controlY = roundPathCoord(auto.y + ody)
 
+  const ux = dx / distance
+  const uy = dy / distance
+  const nx = -uy
+  const ny = ux
+  const chordNormal = { x: nx, y: ny }
+
+  const halfNode = MAP_NODE_SIZE / 2
+  const p0 = { x: sx, y: sy }
+  const p1 = { x: controlX, y: controlY }
+  const p2 = { x: tx, y: ty }
+
+  const sourceEndpointLabelPoint = linkEndpointLabelOnQuad(p0, p1, p2, true, chordNormal, halfNode, distance)
+  const targetEndpointLabelPoint = linkEndpointLabelOnQuad(p0, p1, p2, false, chordNormal, halfNode, distance)
+
   return {
     pathD: `M ${sx} ${sy} Q ${controlX} ${controlY} ${tx} ${ty}`,
     labelPoint: { x: controlX, y: roundPathCoord(controlY - 8) },
     controlPoint: { x: controlX, y: controlY },
+    sourceEndpointLabelPoint,
+    targetEndpointLabelPoint,
   }
 }

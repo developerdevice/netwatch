@@ -124,10 +124,16 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             <div>
               <p className="text-xs text-muted-foreground">Origem</p>
               <p className="text-sm font-medium text-foreground">{linkSrc}</p>
+              {selectedLink.sourcePortLabel ? (
+                <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{selectedLink.sourcePortLabel}</p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Destino</p>
               <p className="text-sm font-medium text-foreground">{linkTgt}</p>
+              {selectedLink.targetPortLabel ? (
+                <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">{selectedLink.targetPortLabel}</p>
+              ) : null}
             </div>
             <div>
               <p className="text-xs text-muted-foreground">Capacidade</p>
@@ -141,7 +147,7 @@ export function DevicePanel({ liveMonitoring }: { liveMonitoring: boolean }) {
             )}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            No mapa, arraste o ponto na curva para ajustar o traçado; clique direito para redefinir.
+            No mapa, identifique cada porta nas etiquetas junto à linha (duplo clique ou toque longo). Arraste o ponto na curva para o traçado; clique direito para o menu.
           </p>
           <button
             onClick={() => dispatch({ type: 'SET_EDITING_LINK', link: selectedLink })}

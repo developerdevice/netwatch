@@ -47,6 +47,9 @@ export function pruneAfterHistoryNavigation(state: AppState): AppState {
   if (s.editingLink && (!map || !map.links.some(l => l.id === s.editingLink!.id))) {
     s = { ...s, editingLink: null }
   }
+  if (s.editingLinkEndpoint && (!map || !map.links.some(l => l.id === s.editingLinkEndpoint!.linkId))) {
+    s = { ...s, editingLinkEndpoint: null }
+  }
   if (s.editingBadge && (!map || !map.badges.some(b => b.id === s.editingBadge!.id))) {
     s = { ...s, editingBadge: null }
   }
