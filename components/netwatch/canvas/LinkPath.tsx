@@ -101,7 +101,7 @@ function LinkPortEndpoint({
   return (
     <g transform={`translate(${cx}, ${cy})`} style={{ cursor: 'pointer' }}>
       <title>
-        {end === 'source' ? 'Porta na origem' : 'Porta no destino'} — duplo clique ou toque longo para editar
+        {`${end === 'source' ? 'Porta na origem' : 'Porta no destino'} — duplo clique ou toque longo para editar`}
       </title>
       <rect
         x={-w / 2 - 4}

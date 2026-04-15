@@ -25,10 +25,14 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      disabled={!mounted}
+      onClick={() => {
+        if (!mounted) return
+        setTheme(isDark ? 'light' : 'dark')
+      }}
+      aria-disabled={!mounted}
       className={cn(
-        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background/40 text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground disabled:opacity-60',
+        'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-background/40 text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground',
+        !mounted && 'pointer-events-none opacity-60',
         className
       )}
       title={a11yLabel}

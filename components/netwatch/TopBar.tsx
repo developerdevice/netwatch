@@ -2,7 +2,7 @@
 
 import { useStore, useActiveMap } from '@/lib/store'
 import { ActiveServerSessionSummary } from '@/lib/types'
-import { ChevronRight, Lock, LockOpen, LogOut } from 'lucide-react'
+import { ChevronRight, Lock, LockOpen, LogOut, Menu } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { getStatusSummary } from '@/lib/netwatch/status'
 import { ThemeToggle } from '@/components/netwatch/ThemeToggle'
@@ -11,9 +11,11 @@ interface TopBarProps {
   session?: ActiveServerSessionSummary
   canvasLocked: boolean
   onToggleCanvasLocked: () => void
+  /** Em viewports estreitas, abre o Sheet com a lista de mapas (sidebar). */
+  onOpenMobileNav?: () => void
 }
 
-export function TopBar({ session, canvasLocked, onToggleCanvasLocked }: TopBarProps) {
+export function TopBar({ session, canvasLocked, onToggleCanvasLocked, onOpenMobileNav }: TopBarProps) {
   const { state, dispatch } = useStore()
   const activeMap = useActiveMap()
 
@@ -41,13 +43,24 @@ export function TopBar({ session, canvasLocked, onToggleCanvasLocked }: TopBarPr
   }
 
   return (
-    <header className="panel-surface flex h-[64px] items-center gap-4 border-b border-border px-6">
-      <div className="min-w-0 space-y-1">
+    <header className="panel-surface flex h-[64px] items-center gap-2 border-b border-border px-3 sm:gap-4 sm:px-6">
+      {onOpenMobileNav ? (
+        <button
+          type="button"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-border bg-background/40 text-foreground md:hidden"
+          aria-label="Abrir menu de mapas"
+          onClick={onOpenMobileNav}
+        >
+          <Menu size={20} aria-hidden />
+        </button>
+      ) : null}
+
+      <div className="min-w-0 shrink-0 space-y-1">
         <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Mapa Ativo
         </div>
-        <div className="flex items-center gap-2">
-          <h1 className="text-lg font-semibold tracking-tight text-foreground">
+        <div className="flex min-w-0 items-center gap-2">
+          <h1 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-lg">
             {activeMap.name}
           </h1>
           <div className="hidden items-center gap-1 text-[11px] font-mono md:flex">
@@ -62,7 +75,7 @@ export function TopBar({ session, canvasLocked, onToggleCanvasLocked }: TopBarPr
 
       <div className="h-10 w-px bg-border/80" />
 
-      <nav className="min-w-0 flex items-center gap-1 text-sm">
+      <nav className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto whitespace-nowrap text-sm">
         {breadcrumb.map((crumb, i) => (
           <span key={crumb.id} className="flex items-center gap-1">
             {i > 0 && <ChevronRight size={12} className="text-muted-foreground/50" />}
