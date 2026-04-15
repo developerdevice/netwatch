@@ -9,6 +9,7 @@ RUN apt-get update \
 FROM base AS deps
 
 COPY package.json package-lock.json ./
+COPY patches ./patches
 
 RUN npm ci
 

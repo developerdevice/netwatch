@@ -4,11 +4,15 @@ Obrigado por considerar contribuir com o NetWatch. Este documento resume o fluxo
 
 ## Antes de abrir PR
 
-1. `npm install`
+1. `npm install` (aplica `patch-package` em `postinstall`; a pasta `patches/` deve estar versionada)
 2. `npm run lint`
 3. `npm run typecheck`
 4. `npm run test`
 5. Para mudancas em rotas ou build: `npm run build`
+
+### Patches de dependencias (`patch-package`)
+
+O projeto inclui `patches/next-themes+0.4.6.patch` para evitar `<script>` na arvore do React 19, em conjunto com o bootstrap de tema em `app/layout.tsx` e `lib/theme-blocking-script.ts`. Ao **atualizar a versao** de `next-themes`, confirme se o patch ainda aplica; se nao, regenere com `npx patch-package next-themes` apos ajustar `node_modules` e commite o ficheiro em `patches/`. Se alterar `ThemeProvider` (chave de storage, temas, `defaultTheme`, `attribute`), mantenha `THEME_BLOCKING_SCRIPT` coerente com esse contrato.
 
 Prefira PRs pequenos, com um objetivo claro. Para a area do mapa, mantenha regras de dominio em `lib/netwatch/` e evite duplicar logica entre menu, toolbar e canvas.
 

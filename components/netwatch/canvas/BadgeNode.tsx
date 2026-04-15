@@ -1,15 +1,20 @@
 'use client'
 
-import { MouseEvent } from 'react'
+import { MouseEvent, TouchEvent } from 'react'
+import { useTheme } from 'next-themes'
 
 import { MapBadge } from '@/lib/types'
-import { getBadgeStyle } from '@/lib/netwatch/badges'
+import { getBadgeStyle, type BadgeTheme } from '@/lib/netwatch/badges'
 
 interface BadgeNodeProps {
   badge: MapBadge
   isSelected: boolean
   onMouseDown: (event: MouseEvent<SVGGElement>) => void
   onContextMenu: (event: MouseEvent<SVGGElement>) => void
+  onTouchStart?: (event: TouchEvent<SVGGElement>) => void
+  onTouchMove?: (event: TouchEvent<SVGGElement>) => void
+  onTouchEnd?: (event: TouchEvent<SVGGElement>) => void
+  onTouchCancel?: (event: TouchEvent<SVGGElement>) => void
 }
 
 export function BadgeNode({
@@ -17,8 +22,14 @@ export function BadgeNode({
   isSelected,
   onMouseDown,
   onContextMenu,
+  onTouchStart,
+  onTouchMove,
+  onTouchEnd,
+  onTouchCancel,
 }: BadgeNodeProps) {
-  const style = getBadgeStyle(badge.color)
+  const { resolvedTheme } = useTheme()
+  const badgeTheme: BadgeTheme = resolvedTheme === 'light' ? 'light' : 'dark'
+  const style = getBadgeStyle(badge.color, badgeTheme)
   const width = Math.max(56, badge.text.length * 7 + 20)
   const halfWidth = width / 2
 
@@ -27,6 +38,10 @@ export function BadgeNode({
       transform={`translate(${badge.x}, ${badge.y})`}
       onMouseDown={onMouseDown}
       onContextMenu={onContextMenu}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      onTouchCancel={onTouchCancel}
       style={{ cursor: 'grab' }}
     >
       {isSelected && (
