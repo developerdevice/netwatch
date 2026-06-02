@@ -345,10 +345,36 @@ export interface RouterOsPingResult {
   isUp: boolean
 }
 
-function parseLatency(rawValue: string | undefined) {
+const ROUTEROS_LATENCY_RE = /^([\d.]+)\s*(us|μs|ms|s)?$/i
+const ROUTEROS_LATENCY_EMBEDDED_RE = /([\d.]+)\s*(us|μs|ms|s)\b/i
+
+function latencyUnitToMs(value: number, unit: string) {
+  const u = unit.toLowerCase()
+  if (u === 'us' || u === 'μs') return value / 1000
+  if (u === 's') return value * 1000
+  return value
+}
+
+/** Converte `=time` / `=status` do RouterOS (ex.: `217us`, `12ms`) para milissegundos. */
+export function parseRouterOsLatencyToMs(rawValue: string | undefined): number | undefined {
   if (!rawValue) return undefined
-  const numeric = Number(rawValue.replace(/[^0-9.]/g, ''))
-  return Number.isFinite(numeric) ? numeric : undefined
+  const trimmed = rawValue.trim()
+  if (!trimmed) return undefined
+
+  const direct = trimmed.match(ROUTEROS_LATENCY_RE)
+  if (direct) {
+    const value = Number(direct[1])
+    if (!Number.isFinite(value)) return undefined
+    const unit = (direct[2] || 'ms').toLowerCase()
+    return latencyUnitToMs(value, unit)
+  }
+
+  const embedded = trimmed.match(ROUTEROS_LATENCY_EMBEDDED_RE)
+  if (!embedded) return undefined
+
+  const value = Number(embedded[1])
+  if (!Number.isFinite(value)) return undefined
+  return latencyUnitToMs(value, embedded[2])
 }
 
 export function summarizePingReplies(replies: RouterOsReplySentence[]): RouterOsPingResult {
@@ -366,7 +392,8 @@ export function summarizePingReplies(replies: RouterOsReplySentence[]): RouterOs
     if (attrs['=received']) received = Number(attrs['=received'])
     if (attrs['=packet-loss']) packetLoss = Number(attrs['=packet-loss'])
 
-    const candidateLatency = parseLatency(attrs['=time']) ?? parseLatency(attrs['=status'])
+    const candidateLatency =
+      parseRouterOsLatencyToMs(attrs['=time']) ?? parseRouterOsLatencyToMs(attrs['=status'])
     if (candidateLatency != null) latencyMs = candidateLatency
 
     if (attrs['=status']) rawStatus = attrs['=status']
