@@ -56,6 +56,8 @@ export function secretsPayloadErrorMessage(code: string): string {
   switch (code) {
     case 'ENCRYPTION_NOT_CONFIGURED':
       return 'Configure NETWATCH_SECRETS_ENCRYPTION_KEY no servidor para salvar credenciais de monitor ou Telegram.'
+    case 'ENCRYPTION_KEY_INVALID':
+      return 'NETWATCH_SECRETS_ENCRYPTION_KEY invalida: use exatamente 32 bytes em base64 ou hex (openssl rand -base64 32).'
     case 'MONITOR_PAIR_REQUIRED':
       return 'Informe usuario e senha de monitor juntos, ou deixe ambos vazios.'
     case 'TELEGRAM_PAIR_REQUIRED':

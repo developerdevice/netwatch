@@ -17,6 +17,10 @@ services:
         required: true
     volumes:
       - netwatch_prod_data:${NETWATCH_DOCKER_PERSIST_DIR:-/app/.data}
+      # Montagem para o entrypoint poder persistir NETWATCH_SECRETS_ENCRYPTION_KEY no host.
+      - type: bind
+        source: .env
+        target: /app/.env
     restart: unless-stopped
 
 volumes:
