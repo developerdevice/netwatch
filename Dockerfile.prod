@@ -40,8 +40,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 RUN mkdir -p /app/.data && chown nextjs:nodejs /app/.data
 
-USER nextjs
+COPY scripts/ensure-env-encryption-key.mjs scripts/docker-entrypoint-prod.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint-prod.sh
 
 EXPOSE 3000
 
+USER root
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint-prod.sh"]
 CMD ["node", "server.js"]
