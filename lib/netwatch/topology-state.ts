@@ -1,4 +1,5 @@
 import { Device, Link, MapBadge, NetworkMap, SubMapNode } from '@/lib/types'
+import { pruneOrphanChildMaps } from '@/lib/netwatch/map-removal'
 
 export type PersistedDevice = Pick<Device, 'id' | 'label' | 'ip' | 'icon' | 'x' | 'y' | 'mapId' | 'comment'>
 
@@ -97,13 +98,13 @@ export function createPersistedTopologyDocument(maps: NetworkMap[]): PersistedTo
 }
 
 export function restorePersistedTopologyDocument(document: PersistedTopologyDocument): NetworkMap[] {
-  return document.maps.map(map => ({
+  const maps = document.maps.map(map => ({
     id: map.id,
     name: map.name,
     parentId: map.parentId,
     devices: map.devices.map(device => ({
       ...device,
-      status: 'unknown',
+      status: 'unknown' as const,
       latency: undefined,
       uptime: undefined,
     })),
@@ -115,6 +116,8 @@ export function restorePersistedTopologyDocument(document: PersistedTopologyDocu
       txBps: undefined,
     })),
   }))
+
+  return pruneOrphanChildMaps(maps)
 }
 
 export function getPersistedTopologySignature(maps: NetworkMap[]): string {

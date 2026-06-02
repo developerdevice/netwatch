@@ -113,6 +113,24 @@ describe('topology persistence helpers', () => {
     })
   })
 
+  it('remove mapas filho órfãos ao restaurar (sem submapNode referenciando)', () => {
+    const withOrphan = createPersistedTopologyDocument([
+      ...maps,
+      {
+        id: 'orphan-child',
+        name: 'Sub-rede Norte',
+        parentId: 'local',
+        devices: [],
+        submapNodes: [],
+        badges: [],
+        links: [],
+      },
+    ])
+
+    const restored = restorePersistedTopologyDocument(withOrphan)
+    expect(restored.some(m => m.id === 'orphan-child')).toBe(false)
+  })
+
   it('restaura topologia com defaults operacionais neutros', () => {
     const restoredMaps = restorePersistedTopologyDocument(createPersistedTopologyDocument(maps))
 

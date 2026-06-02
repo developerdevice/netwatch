@@ -15,6 +15,7 @@ import {
 import { INITIAL_MAPS } from '@/lib/mock-data'
 import { getAggregateStatus } from '@/lib/netwatch/status'
 import { cloneTopologyMaps, MAP_HISTORY_LIMIT, pruneAfterHistoryNavigation, snapshotBeforeMapMutation } from '@/lib/netwatch/map-history'
+import { collectMapsToRemove, removeMapsFromTopology } from '@/lib/netwatch/map-removal'
 import { getPersistedTopologySignature } from '@/lib/netwatch/topology-state'
 
 type Action =
@@ -348,18 +349,8 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'REMOVE_MAP': {
       const h = snapshotBeforeMapMutation(state)
-      const childMaps = state.maps.filter(m => m.parentId === action.mapId).map(m => m.id)
-      const toRemove = [action.mapId, ...childMaps]
-      const remainingMaps = state.maps
-        .filter(m => !toRemove.includes(m.id))
-        .map(m => ({
-          ...m,
-          submapNodes: m.submapNodes.filter(sn => !toRemove.includes(sn.targetMapId)),
-          links: m.links.filter(l => {
-            const isSubmapLink = m.submapNodes.some(sn => toRemove.includes(sn.targetMapId) && (sn.id === l.sourceId || sn.id === l.targetId))
-            return !isSubmapLink
-          }),
-        }))
+      const toRemove = collectMapsToRemove(state.maps, action.mapId)
+      const remainingMaps = removeMapsFromTopology(state.maps, toRemove)
 
       return {
         ...state,
@@ -417,19 +408,36 @@ function reducer(state: AppState, action: Action): AppState {
 
     case 'REMOVE_SUBMAP_NODE': {
       const h = snapshotBeforeMapMutation(state)
+      const parentMap = state.maps.find(m => m.id === action.mapId)
+      const removedNode = parentMap?.submapNodes.find(sn => sn.id === action.nodeId)
+      const targetMapId = removedNode?.targetMapId
+
+      let maps = state.maps.map(m =>
+        m.id === action.mapId
+          ? {
+              ...m,
+              submapNodes: m.submapNodes.filter(sn => sn.id !== action.nodeId),
+              links: m.links.filter(l => l.sourceId !== action.nodeId && l.targetId !== action.nodeId),
+            }
+          : m
+      )
+
+      const mapsRemoved = targetMapId ? collectMapsToRemove(maps, targetMapId) : []
+      if (mapsRemoved.length > 0) {
+        maps = removeMapsFromTopology(maps, mapsRemoved)
+      }
+
+      const activeMapLost =
+        mapsRemoved.includes(state.activeMapId) ||
+        (targetMapId != null && state.activeMapId === targetMapId)
+
       return {
         ...state,
         ...h,
-        maps: state.maps.map(m =>
-          m.id === action.mapId
-            ? {
-                ...m,
-                submapNodes: m.submapNodes.filter(sn => sn.id !== action.nodeId),
-                links: m.links.filter(l => l.sourceId !== action.nodeId && l.targetId !== action.nodeId),
-              }
-            : m
-        ),
+        maps,
+        activeMapId: activeMapLost ? resolveActiveMapId(maps) : state.activeMapId,
         selectedSubmapId: state.selectedSubmapId === action.nodeId ? null : state.selectedSubmapId,
+        editingSubmap: state.editingSubmap?.id === action.nodeId ? null : state.editingSubmap,
         contextMenu: null,
       }
     }
