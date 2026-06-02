@@ -77,6 +77,8 @@ Equivalente: `docker compose -f docker-compose.prod.yaml up --build -d`.
 
 A imagem multi-stage (`Dockerfile.prod`) faz `next build` e arranca com output **standalone** (`node server.js`). Dados SQLite no volume **`netwatch_prod_data`**, montado em `NETWATCH_DOCKER_PERSIST_DIR` (por omissao `/app/.data`, coerente com `NETWATCH_SQLITE_PATH=.data/netwatch.sqlite`).
 
+No arranque em Docker de producao, o entrypoint verifica **`.env`** montado em `/app/.env`: se `NETWATCH_SECRETS_ENCRYPTION_KEY` estiver vazia ou invalida, gera uma chave valida e grava no ficheiro (e exporta para o processo). Se a linha estiver **comentada com `#`**, nao altera — use isso para desativar a geracao automatica.
+
 ### Configuracao no RouterBOARD / RouterOS (servidor ponte)
 
 No equipamento MikroTik (RouterBOARD, CHR, etc.) com RouterOS que o NetWatch usara como ponte (login, ping, traceroute, leitura da topologia persistida no app):

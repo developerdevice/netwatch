@@ -46,6 +46,19 @@ describe('credentials repository', () => {
     expect(creds?.telegramChatId).toBe('12345')
   })
 
+  it('rejeita chave de criptografia invalida sem lancar excecao', async () => {
+    process.env.NETWATCH_SECRETS_ENCRYPTION_KEY = 'chave-curta'
+    vi.resetModules()
+
+    const { upsertServerSecrets } = await import('./credentials-repository')
+    const result = upsertServerSecrets('srv-1', {
+      monitorUsername: 'ELITE',
+      monitorPassword: 'ELT2014@',
+    })
+
+    expect(result).toEqual({ ok: false, code: 'ENCRYPTION_NOT_CONFIGURED' })
+  })
+
   it('patch parcial mantem senha de monitor quando omitida', async () => {
     const { upsertServerSecrets, getMonitorCredentials } = await import('./credentials-repository')
 
