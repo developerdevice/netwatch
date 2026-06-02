@@ -5,6 +5,7 @@ import {
   summarizePingReplies,
   type RouterOsReplySentence,
 } from '@/lib/server/routeros/client'
+import { formatLatencyLabel } from '@/lib/netwatch/latency'
 import { normalizePingTargetIpv4 } from '@/lib/server/security/safe-ipv4'
 import { getDeviceActionContext } from '@/lib/server/routeros/device-action-context'
 
@@ -47,7 +48,7 @@ function formatPingSummary(replies: RouterOsReplySentence[]) {
     `  enviados=${summary.transmitted}`,
     `  recebidos=${summary.received}`,
     `  perda=${summary.packetLoss ?? '?'}%`,
-    `  latencia=${summary.latencyMs != null ? `${Math.round(summary.latencyMs)} ms` : 'n/d'}`,
+    `  latencia=${summary.latencyMs != null ? formatLatencyLabel(summary.latencyMs) : 'n/d'}`,
     `  status=${summary.rawStatus || (summary.isUp ? 'up' : 'down')}`,
     '',
   ].join('\n')

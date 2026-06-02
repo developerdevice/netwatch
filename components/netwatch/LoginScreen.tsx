@@ -2,7 +2,9 @@
 
 import { FormEvent, useMemo, useState } from 'react'
 
-import { Layers, LoaderCircle, Pencil, Plus, Server, Trash2 } from 'lucide-react'
+import { Layers, LoaderCircle, MessageCircle, Pencil, Plus, Server, Trash2 } from 'lucide-react'
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 
 import { NETWATCH_SERVER_REGISTRY_SECRET_HEADER } from '@/lib/constants/server-registry'
 import { RegisteredRouterServer } from '@/lib/types'
@@ -37,6 +39,11 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
   const [serverHost, setServerHost] = useState('')
   const [serverPort, setServerPort] = useState('8728')
   const [serverSecure, setServerSecure] = useState(false)
+  const [monitorUsername, setMonitorUsername] = useState('')
+  const [monitorPassword, setMonitorPassword] = useState('')
+  const [telegramBotToken, setTelegramBotToken] = useState('')
+  const [telegramChatId, setTelegramChatId] = useState('')
+  const [telegramOpen, setTelegramOpen] = useState(false)
 
   const selectedServer = useMemo(
     () => servers.find(server => server.id === selectedServerId) ?? null,
@@ -66,6 +73,11 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
     setServerHost('')
     setServerPort('8728')
     setServerSecure(false)
+    setMonitorUsername('')
+    setMonitorPassword('')
+    setTelegramBotToken('')
+    setTelegramChatId('')
+    setTelegramOpen(false)
     setShowAddServer(true)
   }
 
@@ -76,7 +88,34 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
     setServerHost(server.host)
     setServerPort(String(server.port))
     setServerSecure(server.secure)
+    setMonitorUsername('')
+    setMonitorPassword('')
+    setTelegramBotToken('')
+    setTelegramChatId('')
+    setTelegramOpen(false)
     setPendingRemoveServerId(null)
+  }
+
+  function buildServerPayload() {
+    const body: Record<string, string | number | boolean> = {
+      label: serverLabel,
+      host: serverHost,
+      port: Number(serverPort),
+      secure: serverSecure,
+    }
+    if (monitorUsername.trim()) body.monitorUsername = monitorUsername.trim()
+    if (monitorPassword.trim()) body.monitorPassword = monitorPassword.trim()
+    if (telegramBotToken.trim()) body.telegramBotToken = telegramBotToken.trim()
+    if (telegramChatId.trim()) body.telegramChatId = telegramChatId.trim()
+    return body
+  }
+
+  function clearSensitiveServerFields() {
+    setMonitorUsername('')
+    setMonitorPassword('')
+    setTelegramBotToken('')
+    setTelegramChatId('')
+    setTelegramOpen(false)
   }
 
   async function handleLogin(event: FormEvent<HTMLFormElement>) {
@@ -125,12 +164,7 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
 
     setServerState({ loading: true, error: null })
 
-    const body = {
-      label: serverLabel,
-      host: serverHost,
-      port: Number(serverPort),
-      secure: serverSecure,
-    }
+    const body = buildServerPayload()
 
     try {
       const isEdit = editingServer != null
@@ -163,6 +197,7 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
       setServerHost('')
       setServerPort(nextServer.secure ? '8729' : String(nextServer.port))
       setServerSecure(false)
+      clearSensitiveServerFields()
       setServerState(DEFAULT_LOGIN_STATE)
     } catch (error) {
       setServerState({
@@ -299,6 +334,84 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
                   />
                   Usar TLS/API-SSL
                 </label>
+
+                <div className="space-y-3 rounded-xl border border-border/80 bg-background/20 p-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Monitor em background (opcional)
+                  </p>
+                  <div>
+                    <label className="mb-1.5 block text-sm text-muted-foreground">
+                      Usuario (rotinas em background)
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="off"
+                      value={monitorUsername}
+                      onChange={event => setMonitorUsername(event.target.value)}
+                      placeholder={editingServer ? 'Deixe vazio para nao alterar' : 'Opcional'}
+                      className="w-full rounded-xl border border-border bg-input px-3 py-2.5 text-sm outline-none transition focus:border-foreground/40"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-sm text-muted-foreground">
+                      Senha (rotinas em background)
+                    </label>
+                    <input
+                      type="password"
+                      autoComplete="new-password"
+                      value={monitorPassword}
+                      onChange={event => setMonitorPassword(event.target.value)}
+                      placeholder={editingServer ? 'Deixe vazio para nao alterar' : 'Opcional'}
+                      className="w-full rounded-xl border border-border bg-input px-3 py-2.5 text-sm outline-none transition focus:border-foreground/40"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Popover open={telegramOpen} onOpenChange={setTelegramOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm text-foreground transition hover:bg-accent"
+                      >
+                        <MessageCircle size={16} aria-hidden />
+                        Telegram
+                        {editingServer?.telegramConfigured ? (
+                          <span className="text-[10px] text-emerald-500">ativo</span>
+                        ) : null}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="start" className="w-[min(100vw-2rem,20rem)] space-y-3 p-4">
+                      <p className="text-sm font-medium text-foreground">Alertas Telegram</p>
+                      <div>
+                        <label className="mb-1.5 block text-xs text-muted-foreground">Chat ID</label>
+                        <input
+                          type="password"
+                          autoComplete="off"
+                          value={telegramChatId}
+                          onChange={event => setTelegramChatId(event.target.value)}
+                          placeholder={editingServer ? 'Vazio = nao alterar' : ''}
+                          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="mb-1.5 block text-xs text-muted-foreground">Bot token</label>
+                        <input
+                          type="password"
+                          autoComplete="new-password"
+                          value={telegramBotToken}
+                          onChange={event => setTelegramBotToken(event.target.value)}
+                          placeholder={editingServer ? 'Vazio = nao alterar' : ''}
+                          className="w-full rounded-lg border border-border bg-input px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <p className="text-[11px] text-muted-foreground">
+                        Notifica queda e recuperacao apos 10s (ignora flaps rapidos).
+                      </p>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
                 {serverState.error && <p className="text-sm text-rose-400">{serverState.error}</p>}
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <button
@@ -375,6 +488,8 @@ export function LoginScreen({ initialServers, registrySecretRequired }: LoginScr
                           <div className="truncate text-xs text-muted-foreground">
                             {server.host}:{server.port}
                             {server.secure ? ' • TLS' : ''}
+                            {server.monitorConfigured ? ' • Monitor' : ''}
+                            {server.telegramConfigured ? ' • Telegram' : ''}
                           </div>
                         </div>
                       </label>

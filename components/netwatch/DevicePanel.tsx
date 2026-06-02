@@ -9,6 +9,7 @@ import { DeviceStatus, DeviceIcon } from '@/lib/types'
 import { getBadgeColorLabel, getBadgeStyle, type BadgeTheme } from '@/lib/netwatch/badges'
 import { clearSelection, openDeviceHistory, openDevicePing, openDeviceTracert } from '@/lib/netwatch/commands'
 import { getLinkCapacity, getLinkCapacityLabel } from '@/lib/netwatch/links'
+import { formatLatencyForDevicePanel } from '@/lib/netwatch/latency'
 import { getStatusSummary } from '@/lib/netwatch/status'
 import { useIsMdUp } from '@/hooks/use-is-md-up'
 
@@ -297,7 +298,7 @@ export function DevicePanel({
           <InfoRow label="IP" value={device.ip} mono />
           <InfoRow label="Tipo" value={iconLabels[device.icon] || device.icon} />
           {device.latency != null && (
-            <InfoRow label="Latência" value={`${device.latency} ms`} mono />
+            <InfoRow label="Latência" value={formatLatencyForDevicePanel(device.latency!)} mono />
           )}
           {device.uptime != null && (
             <InfoRow

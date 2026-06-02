@@ -7,26 +7,17 @@ import {
   removeRegisteredServer,
   updateRegisteredServer,
 } from '@/lib/server/server-registry/repository'
+import {
+  applyServerSecretsFromPayload,
+  buildSecretsErrorResponse,
+  getServerAfterSecrets,
+} from '@/lib/server/server-registry/apply-server-secrets'
 import { assertServerRegistrySecret } from '@/lib/server/server-registry/secret'
+import { isValidServerRegistryPayload } from '@/lib/server/server-registry/server-secrets-payload'
 
 export const runtime = 'nodejs'
 
 const MAX_SERVER_LABEL_LEN = 120
-
-function isValidPayload(value: unknown): value is { label: string; host: string; port: number; secure?: boolean } {
-  if (!value || typeof value !== 'object') return false
-
-  const payload = value as Record<string, unknown>
-  return (
-    typeof payload.host === 'string' &&
-    typeof payload.label === 'string' &&
-    typeof payload.port === 'number' &&
-    Number.isInteger(payload.port) &&
-    payload.port > 0 &&
-    payload.port <= 65535 &&
-    (payload.secure == null || typeof payload.secure === 'boolean')
-  )
-}
 
 type RouteContext = { params: Promise<{ id: string }> }
 
@@ -53,7 +44,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const payload = await request.json()
-    if (!isValidPayload(payload)) {
+    if (!isValidServerRegistryPayload(payload)) {
       return NextResponse.json(
         {
           ok: false,
@@ -95,9 +86,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     const result = updateRegisteredServer(serverId, {
-      ...payload,
       label,
       host: hostNorm,
+      port: payload.port,
+      secure: payload.secure,
     })
 
     if (!result.ok) {
@@ -122,9 +114,17 @@ export async function PATCH(request: Request, context: RouteContext) {
       )
     }
 
+    const secretsResult = applyServerSecretsFromPayload(serverId, payload)
+    if (!secretsResult.ok) {
+      const err = buildSecretsErrorResponse(secretsResult)
+      return NextResponse.json({ ok: err.ok, error: err.error }, { status: err.status })
+    }
+
+    const refreshed = getServerAfterSecrets(serverId) ?? result.server
+
     return NextResponse.json({
       ok: true,
-      data: { server: result.server },
+      data: { server: refreshed },
     })
   } catch {
     return NextResponse.json(
