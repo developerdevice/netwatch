@@ -7,24 +7,28 @@ const IV_LENGTH = 12
 const TAG_LENGTH = 16
 const KEY_LENGTH = 32
 
-function getEncryptionKey(): Buffer {
+function resolveEncryptionKey(): Buffer | null {
   const raw = process.env.NETWATCH_SECRETS_ENCRYPTION_KEY?.trim()
-  if (!raw) {
-    throw new Error('NETWATCH_SECRETS_ENCRYPTION_KEY is not configured')
-  }
+  if (!raw) return null
 
   let key = Buffer.from(raw, 'base64')
   if (key.length !== KEY_LENGTH) {
     key = Buffer.from(raw, 'hex')
   }
-  if (key.length !== KEY_LENGTH) {
-    throw new Error('NETWATCH_SECRETS_ENCRYPTION_KEY must be 32 bytes (base64 or hex)')
+  if (key.length !== KEY_LENGTH) return null
+  return key
+}
+
+function getEncryptionKey(): Buffer {
+  const key = resolveEncryptionKey()
+  if (!key) {
+    throw new Error('NETWATCH_SECRETS_ENCRYPTION_KEY is missing or invalid (must be 32 bytes as base64 or hex)')
   }
   return key
 }
 
 export function isSecretsEncryptionConfigured(): boolean {
-  return Boolean(process.env.NETWATCH_SECRETS_ENCRYPTION_KEY?.trim())
+  return resolveEncryptionKey() != null
 }
 
 export function encryptSecret(plaintext: string): string {

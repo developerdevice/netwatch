@@ -14,7 +14,7 @@
     "start:docker": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test scripts/ensure-env-encryption-key.test.mjs",
     "mikrotik:login": "node scripts/mikrotik/login-debug.mjs",
     "mikrotik:command": "node scripts/mikrotik/command-debug.mjs",
     "mikrotik:ping": "node scripts/mikrotik/ping-debug.mjs",

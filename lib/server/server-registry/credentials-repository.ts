@@ -36,17 +36,20 @@ export function getServerConfigFlags(serverId: string): {
   const db = getSqliteDatabase()
   const row = db
     .prepare(
-      `SELECT telegram_bot_token_enc, telegram_chat_id
+      `SELECT monitor_username, monitor_password_enc, telegram_bot_token_enc, telegram_chat_id
        FROM server_monitor_secrets WHERE server_id = ?`
     )
-    .get(serverId) as Pick<SecretsRow, 'telegram_bot_token_enc' | 'telegram_chat_id'> | undefined
+    .get(serverId) as Pick<
+      SecretsRow,
+      'monitor_username' | 'monitor_password_enc' | 'telegram_bot_token_enc' | 'telegram_chat_id'
+    > | undefined
 
   if (!row) {
     return { monitorConfigured: false, telegramConfigured: false }
   }
 
   return {
-    monitorConfigured: getMonitorCredentials(serverId) != null,
+    monitorConfigured: Boolean(row.monitor_username?.trim() && row.monitor_password_enc),
     telegramConfigured: Boolean(row.telegram_bot_token_enc && row.telegram_chat_id),
   }
 }
@@ -71,17 +74,29 @@ export function getMonitorCredentials(serverId: string): MonitorCredentials | nu
 
   if (!row?.monitor_username?.trim() || !row.monitor_password_enc) return null
 
-  return {
-    monitorUsername: row.monitor_username,
-    monitorPassword: decryptSecret(row.monitor_password_enc),
-    telegramBotToken: row.telegram_bot_token_enc ? decryptSecret(row.telegram_bot_token_enc) : null,
-    telegramChatId: row.telegram_chat_id,
+  try {
+    return {
+      monitorUsername: row.monitor_username,
+      monitorPassword: decryptSecret(row.monitor_password_enc),
+      telegramBotToken: row.telegram_bot_token_enc ? decryptSecret(row.telegram_bot_token_enc) : null,
+      telegramChatId: row.telegram_chat_id,
+    }
+  } catch {
+    return null
   }
 }
 
 export type UpsertSecretsResult =
   | { ok: true }
-  | { ok: false; code: 'ENCRYPTION_NOT_CONFIGURED' | 'MONITOR_PAIR_REQUIRED' | 'TELEGRAM_PAIR_REQUIRED' | 'MONITOR_USERNAME_PASSWORD_REQUIRED' }
+  | {
+      ok: false
+      code:
+        | 'ENCRYPTION_NOT_CONFIGURED'
+        | 'ENCRYPTION_KEY_INVALID'
+        | 'MONITOR_PAIR_REQUIRED'
+        | 'TELEGRAM_PAIR_REQUIRED'
+        | 'MONITOR_USERNAME_PASSWORD_REQUIRED'
+    }
 
 export function upsertServerSecrets(serverId: string, patch: ServerSecretsPatch): UpsertSecretsResult {
   if (!isSecretsEncryptionConfigured()) {
@@ -133,7 +148,11 @@ export function upsertServerSecrets(serverId: string, patch: ServerSecretsPatch)
 
   let nextPasswordEnc = existing?.monitor_password_enc ?? ''
   if (monitorPassProvided) {
-    nextPasswordEnc = encryptSecret(patch.monitorPassword!.trim())
+    try {
+      nextPasswordEnc = encryptSecret(patch.monitorPassword!.trim())
+    } catch {
+      return { ok: false, code: 'ENCRYPTION_KEY_INVALID' }
+    }
   } else if (!existing && monitorUserProvided) {
     return { ok: false, code: 'MONITOR_USERNAME_PASSWORD_REQUIRED' }
   }
@@ -142,7 +161,11 @@ export function upsertServerSecrets(serverId: string, patch: ServerSecretsPatch)
   let nextChatId = existing?.telegram_chat_id ?? null
 
   if (hasTelegramToken && hasTelegramChat) {
-    nextTokenEnc = encryptSecret(patch.telegramBotToken!.trim())
+    try {
+      nextTokenEnc = encryptSecret(patch.telegramBotToken!.trim())
+    } catch {
+      return { ok: false, code: 'ENCRYPTION_KEY_INVALID' }
+    }
     nextChatId = patch.telegramChatId!.trim()
   }
 

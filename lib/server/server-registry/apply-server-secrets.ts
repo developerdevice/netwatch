@@ -23,7 +23,7 @@ export function applyServerSecretsFromPayload(
 }
 
 export function secretsResultToHttpStatus(code: string): number {
-  if (code === 'ENCRYPTION_NOT_CONFIGURED') return 503
+  if (code === 'ENCRYPTION_NOT_CONFIGURED' || code === 'ENCRYPTION_KEY_INVALID') return 503
   return 400
 }
 

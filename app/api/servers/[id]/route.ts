@@ -126,7 +126,8 @@ export async function PATCH(request: Request, context: RouteContext) {
       ok: true,
       data: { server: refreshed },
     })
-  } catch {
+  } catch (error) {
+    console.error('[servers PATCH]', error)
     return NextResponse.json(
       {
         ok: false,
