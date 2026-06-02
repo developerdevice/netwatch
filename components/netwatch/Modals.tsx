@@ -1,7 +1,8 @@
 'use client'
 
 import { useStore } from '@/lib/store'
-import { AppState, BadgeColor, DeviceIcon, LinkCapacity, MapBadge } from '@/lib/types'
+import { AppState, BadgeColor, DeviceIcon, HistoryEntry, LinkCapacity, MapBadge } from '@/lib/types'
+import { formatLatencyForDevicePanel } from '@/lib/netwatch/latency'
 import { useIsMobile } from '@/hooks/use-mobile'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { X, Router, Radio, Server, Wifi, Antenna, Box } from 'lucide-react'
@@ -779,25 +780,87 @@ function DeviceCommandStream({
   )
 }
 
+interface PersistedHistoryEntry {
+  timestamp: string
+  status: string
+  latency?: number
+  previousStatus?: string | null
+}
+
 export function HistoryModal() {
   const { state, dispatch } = useStore()
   const deviceId = state.showHistory
-  
+  const [persistedEntries, setPersistedEntries] = useState<PersistedHistoryEntry[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
+  useEffect(() => {
+    if (!deviceId) {
+      setPersistedEntries([])
+      return
+    }
+
+    let cancelled = false
+    setHistoryLoading(true)
+
+    void (async () => {
+      try {
+        const response = await fetch(`/api/devices/history?deviceId=${encodeURIComponent(deviceId)}`, {
+          cache: 'no-store',
+        })
+        if (!response.ok || cancelled) return
+        const payload = await response.json()
+        if (!payload.ok || cancelled) return
+        setPersistedEntries((payload.data?.entries ?? []) as PersistedHistoryEntry[])
+      } catch {
+        if (!cancelled) setPersistedEntries([])
+      } finally {
+        if (!cancelled) setHistoryLoading(false)
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [deviceId])
+
   if (!deviceId) return null
 
   const device = findDeviceById(state.maps, deviceId)
 
-  const history = state.deviceHistory[deviceId] || []
+  const sessionHistory = state.deviceHistory[deviceId] || []
+  const mergedKeys = new Set<string>()
+  const history = [
+    ...persistedEntries.map(entry => ({
+      timestamp: new Date(entry.timestamp),
+      status: entry.status as HistoryEntry['status'],
+      latency: entry.latency,
+      key: `p-${entry.timestamp}-${entry.status}`,
+    })),
+    ...sessionHistory.map(entry => ({
+      timestamp: entry.timestamp,
+      status: entry.status,
+      latency: entry.latency,
+      key: `s-${entry.timestamp.getTime()}-${entry.status}`,
+    })),
+  ]
+    .filter(row => {
+      if (mergedKeys.has(row.key)) return false
+      mergedKeys.add(row.key)
+      return true
+    })
+    .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
 
   return (
     <Modal title={`Histórico - ${device?.label || deviceId}`} onClose={() => dispatch({ type: 'SET_SHOW_HISTORY', deviceId: null })}>
       <div className="max-h-[300px] overflow-y-auto">
-        {history.length === 0 ? (
+        {historyLoading ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Carregando historico...</p>
+        ) : history.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">Nenhum histórico disponível</p>
         ) : (
           <div className="space-y-1">
-            {history.slice().reverse().map((entry, i) => (
-              <div key={i} className="flex items-center gap-3 px-3 py-2 rounded bg-secondary/50 text-sm">
+            {history.map((entry, i) => (
+              <div key={`${entry.timestamp.getTime()}-${i}`} className="flex items-center gap-3 px-3 py-2 rounded bg-secondary/50 text-sm">
                 <span
                   className={`w-2 h-2 rounded-full ${
                     entry.status === 'online' ? 'bg-emerald-500' :
@@ -810,7 +873,7 @@ export function HistoryModal() {
                 </span>
                 <span className="text-foreground capitalize">{entry.status}</span>
                 {entry.latency != null && (
-                  <span className="text-muted-foreground ml-auto">{entry.latency}ms</span>
+                  <span className="text-muted-foreground ml-auto">{formatLatencyForDevicePanel(entry.latency)}</span>
                 )}
               </div>
             ))}

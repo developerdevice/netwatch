@@ -76,6 +76,8 @@ export interface RegisteredRouterServer {
   host: string
   port: number
   secure: boolean
+  monitorConfigured: boolean
+  telegramConfigured: boolean
 }
 
 export interface ActiveServerSessionSummary {
