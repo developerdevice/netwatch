@@ -1,5 +1,6 @@
 'use client'
 
+import { formatLatencyLabel } from '@/lib/netwatch/latency'
 import { Device, DeviceIcon } from '@/lib/types'
 import { truncateNodeLabel } from '@/lib/netwatch/map-geometry'
 import { statusColorHex } from '@/lib/utils-net'
@@ -219,7 +220,7 @@ export function DeviceNode({
             fontFamily="var(--font-mono)"
             style={{ userSelect: 'none', pointerEvents: 'none' }}
           >
-            {device.latency != null ? `${device.latency}ms` : '--'}
+            {device.latency != null ? formatLatencyLabel(device.latency) : '--'}
           </text>
         </g>
       )}

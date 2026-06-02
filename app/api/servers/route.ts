@@ -5,28 +5,19 @@ import { rateLimitedResponse } from '@/lib/server/rate-limit/http'
 import { normalizeServerConnectHost } from '@/lib/server/security/safe-server-host'
 import { addRegisteredServer, listRegisteredServers } from '@/lib/server/server-registry/repository'
 import {
+  applyServerSecretsFromPayload,
+  buildSecretsErrorResponse,
+  getServerAfterSecrets,
+} from '@/lib/server/server-registry/apply-server-secrets'
+import {
   assertServerRegistrySecret,
   isServerRegistrySecretConfigured,
 } from '@/lib/server/server-registry/secret'
+import { isValidServerRegistryPayload } from '@/lib/server/server-registry/server-secrets-payload'
 
 export const runtime = 'nodejs'
 
 const MAX_SERVER_LABEL_LEN = 120
-
-function isValidPayload(value: unknown): value is { label: string; host: string; port: number; secure?: boolean } {
-  if (!value || typeof value !== 'object') return false
-
-  const payload = value as Record<string, unknown>
-  return (
-    typeof payload.host === 'string' &&
-    typeof payload.label === 'string' &&
-    typeof payload.port === 'number' &&
-    Number.isInteger(payload.port) &&
-    payload.port > 0 &&
-    payload.port <= 65535 &&
-    (payload.secure == null || typeof payload.secure === 'boolean')
-  )
-}
 
 export async function GET() {
   return NextResponse.json({
@@ -49,7 +40,7 @@ export async function POST(request: Request) {
     if (secretResponse) return secretResponse
 
     const payload = await request.json()
-    if (!isValidPayload(payload)) {
+    if (!isValidServerRegistryPayload(payload)) {
       return NextResponse.json(
         {
           ok: false,
@@ -91,15 +82,24 @@ export async function POST(request: Request) {
     }
 
     const server = addRegisteredServer({
-      ...payload,
       label,
       host: hostNorm,
+      port: payload.port,
+      secure: payload.secure,
     })
+
+    const secretsResult = applyServerSecretsFromPayload(server.id, payload)
+    if (!secretsResult.ok) {
+      const err = buildSecretsErrorResponse(secretsResult)
+      return NextResponse.json({ ok: err.ok, error: err.error }, { status: err.status })
+    }
+
+    const refreshed = getServerAfterSecrets(server.id) ?? server
 
     return NextResponse.json({
       ok: true,
       data: {
-        server,
+        server: refreshed,
       },
     })
   } catch {

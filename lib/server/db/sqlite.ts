@@ -18,7 +18,41 @@ function initializeDatabase(db: Database.Database) {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    )
+    );
+
+    CREATE TABLE IF NOT EXISTS server_monitor_secrets (
+      server_id TEXT PRIMARY KEY,
+      monitor_username TEXT,
+      monitor_password_enc TEXT,
+      telegram_bot_token_enc TEXT,
+      telegram_chat_id TEXT,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS device_monitor_state (
+      server_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      map_id TEXT NOT NULL,
+      status TEXT NOT NULL,
+      latency_ms REAL,
+      status_since TEXT NOT NULL,
+      PRIMARY KEY (server_id, device_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS device_status_events (
+      id TEXT PRIMARY KEY,
+      server_id TEXT NOT NULL,
+      device_id TEXT NOT NULL,
+      device_label TEXT NOT NULL,
+      map_id TEXT NOT NULL,
+      previous_status TEXT,
+      new_status TEXT NOT NULL,
+      latency_ms REAL,
+      changed_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_device_status_events_lookup
+      ON device_status_events (server_id, device_id, changed_at DESC);
   `)
 }
 

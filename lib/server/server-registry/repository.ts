@@ -4,6 +4,9 @@ import { randomUUID } from 'node:crypto'
 
 import { RegisteredRouterServer } from '@/lib/types'
 import { getSqliteDatabase } from '@/lib/server/db/sqlite'
+import { getServerConfigFlags } from '@/lib/server/server-registry/credentials-repository'
+import { deleteMonitorDataForServer } from '@/lib/server/monitoring/monitor-repository'
+import { deleteServerSecrets } from '@/lib/server/server-registry/credentials-repository'
 
 const SERVER_REGISTRY_KEY = 'server_registry'
 
@@ -11,9 +14,27 @@ interface StoredRow {
   value: string
 }
 
+interface PersistedServerRecord {
+  id: string
+  label: string
+  host: string
+  port: number
+  secure: boolean
+}
+
 interface PersistedServerRegistryDocument {
   version: 1
-  servers: RegisteredRouterServer[]
+  servers: PersistedServerRecord[]
+}
+
+function toPersistedRecord(server: RegisteredRouterServer): PersistedServerRecord {
+  return {
+    id: server.id,
+    label: server.label,
+    host: server.host,
+    port: server.port,
+    secure: server.secure,
+  }
 }
 
 function readDocument(): PersistedServerRegistryDocument | null {
@@ -42,8 +63,26 @@ function writeDocument(document: PersistedServerRegistryDocument) {
   })
 }
 
-export function listRegisteredServers() {
-  return readDocument()?.servers ?? []
+function withConfigFlags(server: Omit<RegisteredRouterServer, 'monitorConfigured' | 'telegramConfigured'>): RegisteredRouterServer {
+  const flags = getServerConfigFlags(server.id)
+  return {
+    ...server,
+    monitorConfigured: flags.monitorConfigured,
+    telegramConfigured: flags.telegramConfigured,
+  }
+}
+
+export function listRegisteredServers(): RegisteredRouterServer[] {
+  const servers = readDocument()?.servers ?? []
+  return servers.map(server =>
+    withConfigFlags({
+      id: server.id,
+      label: server.label,
+      host: server.host,
+      port: server.port,
+      secure: server.secure,
+    })
+  )
 }
 
 export function getRegisteredServer(serverId: string) {
@@ -70,17 +109,18 @@ export function addRegisteredServer(input: CreateRegisteredServerInput) {
     return duplicate
   }
 
-  const nextServer: RegisteredRouterServer = {
+  const base = {
     id: randomUUID(),
     label: input.label.trim() || normalizedHost,
     host: normalizedHost,
     port: normalizedPort,
     secure: input.secure ?? normalizedPort === 8729,
   }
+  const nextServer = withConfigFlags(base)
 
   writeDocument({
     version: 1,
-    servers: [...currentServers, nextServer],
+    servers: [...currentServers.map(toPersistedRecord), toPersistedRecord(nextServer)],
   })
 
   return nextServer
@@ -106,20 +146,20 @@ export function updateRegisteredServer(id: string, input: CreateRegisteredServer
   }
 
   const previous = currentServers[index]
-  const nextServer: RegisteredRouterServer = {
-    ...previous,
+  const nextServer = withConfigFlags({
+    id: previous.id,
     label: input.label.trim() || normalizedHost,
     host: normalizedHost,
     port: normalizedPort,
     secure: input.secure ?? normalizedPort === 8729,
-  }
+  })
 
   const nextServers = [...currentServers]
   nextServers[index] = nextServer
 
   writeDocument({
     version: 1,
-    servers: nextServers,
+    servers: nextServers.map(toPersistedRecord),
   })
 
   return { ok: true, server: nextServer }
@@ -132,8 +172,11 @@ export function removeRegisteredServer(id: string): boolean {
 
   writeDocument({
     version: 1,
-    servers: nextServers,
+    servers: nextServers.map(toPersistedRecord),
   })
+
+  deleteServerSecrets(id)
+  deleteMonitorDataForServer(id)
 
   return true
 }
